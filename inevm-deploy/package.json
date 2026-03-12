@@ -1,0 +1,25 @@
+{
+  "name": "inevm-deploy",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "deploy:injective:testnet": "hardhat run scripts/deploy.ts --network injectiveEvmTestnet",
+    "deploy:injective:ignition": "hardhat ignition deploy ignition/modules/HeresCapsuleManager.ts --network injectiveEvmTestnet",
+    "test": "hardhat test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ignition": "^3.0.9",
+    "@nomicfoundation/hardhat-toolbox-viem": "^5.0.3",
+    "@types/node": "^22.19.15",
+    "forge-std": "github:foundry-rs/forge-std#v1.9.4",
+    "hardhat": "^3.1.11",
+    "typescript": "~5.8.0",
+    "viem": "^2.47.1"
+  }
+}
