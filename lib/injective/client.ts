@@ -173,7 +173,10 @@ export function deriveInjectiveCreateParams(intentData: Uint8Array): {
   }
 
   const now = Math.floor(Date.now() / 1000)
-  const inactivitySeconds = Math.max(Number(parsed.inactivityDays || 0) * 24 * 60 * 60, 60)
+  const inactivityMinutes = Number(parsed.inactivityMinutes || 0)
+  const inactivitySeconds = inactivityMinutes > 0
+    ? Math.max(inactivityMinutes * 60, 60)
+    : Math.max(Number(parsed.inactivityDays || 0) * 24 * 60 * 60, 60)
   const executeAt = BigInt(now + inactivitySeconds)
 
   return {

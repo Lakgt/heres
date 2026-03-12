@@ -4,11 +4,11 @@ import { useRef, useEffect, useState } from 'react'
 
 const ASCII_CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%&*.:;\'"+=<>?/\\|[]{}'
 
-const PHRASE = 'MAGICBLOCK ER'
+const PHRASE = 'INJECTIVE EVM'
 const COLS = 52
 const ROWS = 22
 
-/** Indices in the grid where the phrase "MAGICBLOCK ER" is shown (center row, centered). */
+/** Indices in the grid where the phrase "INJECTIVE EVM" is shown (center row, centered). */
 const PHRASE_ROW = Math.floor(ROWS / 2)
 const PHRASE_START_COL = Math.floor((COLS - PHRASE.length) / 2)
 const PHRASE_INDICES = Array.from(
@@ -63,7 +63,7 @@ export function AsciiCapsule({ className = '', bgColor = 'var(--Heres-bg)' }: { 
     return () => cancelAnimationFrame(rafRef.current)
   }, [])
 
-  // Periodically reveal "MAGICBLOCK ER" for ~1.8s, then back to chaos
+  // Periodically reveal "INJECTIVE EVM" for ~1.8s, then back to chaos
   useEffect(() => {
     const reveal = () => {
       revealRef.current = true

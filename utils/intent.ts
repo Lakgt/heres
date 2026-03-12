@@ -19,6 +19,7 @@ export interface IntentData {
   beneficiaries: Beneficiary[]
   totalAmount?: string
   inactivityDays: number
+  inactivityMinutes?: number
   delayDays: number
   cre?: CreIntentData
   // Legacy payload field for backward compatibility with already-created capsules.
@@ -32,6 +33,7 @@ export interface NftIntentData {
   nftRecipients: string[]
   nftAssignments?: Record<string, number>
   inactivityDays: number
+  inactivityMinutes?: number
   delayDays: number
   cre?: CreIntentData
   // Legacy payload field for backward compatibility with already-created capsules.

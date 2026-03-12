@@ -43,6 +43,7 @@ export default function CreatePage() {
   const [totalAmount, setTotalAmount] = useState('')
   const [targetDate, setTargetDate] = useState('')
   const [inactivityDays, setInactivityDays] = useState('')
+  const [demoInactivityMinutes, setDemoInactivityMinutes] = useState('')
   const [delayDays, setDelayDays] = useState<string>(DEFAULT_VALUES.DELAY_DAYS)
   const [showSimulation, setShowSimulation] = useState(false)
   const [isPending, setIsPending] = useState(false)
@@ -64,6 +65,10 @@ export default function CreatePage() {
   const injectiveMode = isInjectiveEvmChain()
   const assetSymbol = injectiveMode ? 'INJ' : 'SOL'
   const injectiveValidBeneficiaries = beneficiaries.filter((beneficiary) => beneficiary.address.trim())
+  const hasValidExecutionCondition = Boolean(
+    (demoInactivityMinutes && parseInt(demoInactivityMinutes, 10) > 0) ||
+    (inactivityDays && parseInt(inactivityDays, 10) > 0)
+  )
   const isInjectiveCreateReady =
     capsuleType === 'token' &&
     injectiveValidBeneficiaries.length === 1 &&
@@ -79,8 +84,7 @@ export default function CreatePage() {
     !connected ||
     !ownerAddress ||
     !intent.trim() ||
-    !inactivityDays ||
-    parseInt(inactivityDays) <= 0 ||
+    !hasValidExecutionCondition ||
     !wallet.signMessage ||
     !isValidEmail(creEmail) ||
     creUnlockCode.trim().length < 6 ||
@@ -97,7 +101,7 @@ export default function CreatePage() {
         ? 'Choose an asset type'
         : !intent.trim()
           ? 'Enter an intent statement'
-          : !inactivityDays || parseInt(inactivityDays) <= 0
+          : !hasValidExecutionCondition
             ? 'Set a valid execution condition'
             : !wallet.signMessage
               ? 'Wallet message signing is not ready yet'
@@ -384,7 +388,7 @@ export default function CreatePage() {
       return
     }
 
-    if (!inactivityDays || parseInt(inactivityDays) <= 0) {
+    if (!hasValidExecutionCondition) {
       alert('Please select a target date or specify a valid inactivity period')
       return
     }
@@ -408,8 +412,8 @@ export default function CreatePage() {
     setError(null)
 
     try {
-
-      const inactivityDaysNum = parseInt(inactivityDays)
+      const inactivityDaysNum = inactivityDays ? parseInt(inactivityDays, 10) : 0
+      const inactivityMinutesNum = demoInactivityMinutes ? parseInt(demoInactivityMinutes, 10) : 0
       let intentData: Uint8Array
       let creMeta: {
         enabled: true
@@ -471,6 +475,7 @@ export default function CreatePage() {
           nftRecipients: validRecipients,
           nftAssignments,
           inactivityDays: inactivityDaysNum,
+          inactivityMinutes: inactivityMinutesNum > 0 ? inactivityMinutesNum : undefined,
           delayDays: parseInt(delayDays),
           cre: creMeta,
         }
@@ -481,15 +486,17 @@ export default function CreatePage() {
           beneficiaries,
           totalAmount,
           inactivityDays: inactivityDaysNum,
+          inactivityMinutes: inactivityMinutesNum > 0 ? inactivityMinutesNum : undefined,
           delayDays: parseInt(delayDays),
           cre: creMeta,
         })
       }
 
-      // On devnet, allow small values for testing (treat values <= 30 as minutes, not days)
-      const inactivityPeriodSeconds = !injectiveMode && SOLANA_CONFIG.NETWORK === 'devnet' && inactivityDaysNum <= 30
-        ? inactivityDaysNum * 60  // treat as minutes on devnet for small values
-        : daysToSeconds(inactivityDaysNum)
+      const inactivityPeriodSeconds = injectiveMode && inactivityMinutesNum > 0
+        ? inactivityMinutesNum * 60
+        : !injectiveMode && SOLANA_CONFIG.NETWORK === 'devnet' && inactivityDaysNum <= 30
+          ? inactivityDaysNum * 60
+          : daysToSeconds(inactivityDaysNum)
 
       // Check if there's an existing capsule - if so, recreate it instead of creating new
       let hash: string
@@ -1162,6 +1169,7 @@ export default function CreatePage() {
                         value={targetDate}
                         onChange={(e) => {
                           setTargetDate(e.target.value)
+                          setDemoInactivityMinutes('')
                           if (e.target.value) {
                             const selectedDate = new Date(e.target.value)
                             const today = new Date()
@@ -1191,11 +1199,17 @@ export default function CreatePage() {
                     <label className="block text-sm text-Heres-muted mb-2">
                       {SOLANA_CONFIG.NETWORK === 'devnet' ? 'Inactivity period (≤30 = minutes, >30 = days)' : 'Or inactivity period (days)'}
                     </label>
+                    {injectiveMode && (
+                      <p className="mb-2 text-xs text-Heres-muted">
+                        Use days for normal capsules, or pick a 1-3 minute demo period below.
+                      </p>
+                    )}
                     <input
                       type="number"
                       value={inactivityDays}
                       onChange={(e) => {
                         setInactivityDays(e.target.value)
+                        setDemoInactivityMinutes('')
                         if (e.target.value) {
                           const days = parseInt(e.target.value)
                           if (days > 0) {
@@ -1208,6 +1222,34 @@ export default function CreatePage() {
                       placeholder="Enter days"
                       className="w-full rounded-xl border border-Heres-border bg-Heres-surface/80 p-4 text-Heres-white placeholder-Heres-muted focus:outline-none focus:border-Heres-accent/50"
                     />
+                    {injectiveMode && (
+                      <div className="mt-3">
+                        <p className="text-xs text-Heres-muted mb-2">Demo quick mode</p>
+                        <div className="flex gap-2">
+                          {[1, 2, 3].map((m) => (
+                            <button
+                              key={m}
+                              type="button"
+                              onClick={() => {
+                                setDemoInactivityMinutes(String(m))
+                                setInactivityDays('')
+                                setTargetDate('')
+                              }}
+                              className={`rounded-lg border px-3 py-1 text-xs transition-colors ${
+                                demoInactivityMinutes === String(m)
+                                  ? 'border-Heres-accent bg-Heres-accent/20 text-Heres-accent'
+                                  : 'border-Heres-accent/30 bg-Heres-accent/10 text-Heres-accent hover:bg-Heres-accent/20'
+                              }`}
+                            >
+                              {m} min
+                            </button>
+                          ))}
+                        </div>
+                        <p className="mt-2 text-xs text-Heres-muted">
+                          For demo use. Leave this unselected to use the normal day-based inactivity period.
+                        </p>
+                      </div>
+                    )}
                     {!isInjectiveEvmChain() && SOLANA_CONFIG.NETWORK === 'devnet' && (
                       <div className="flex gap-2 mt-2">
                         {[1, 3, 5, 10].map((m) => (
@@ -1229,6 +1271,8 @@ export default function CreatePage() {
                   <p className="text-sm text-Heres-muted mt-4">
                     {targetDate
                       ? `Triggers on ${new Date(targetDate).toLocaleDateString()}, ${delayDays}-day delay.`
+                      : demoInactivityMinutes
+                        ? `After ${demoInactivityMinutes} minute${demoInactivityMinutes === '1' ? '' : 's'} of inactivity, ${delayDays}-day delay.`
                       : inactivityDays
                         ? !isInjectiveEvmChain() && SOLANA_CONFIG.NETWORK === 'devnet' && parseInt(inactivityDays) <= 30
                           ? `After ${inactivityDays} minutes of inactivity (devnet test mode).`

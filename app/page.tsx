@@ -71,46 +71,57 @@ const quickStartCards = [
     desc: 'Define beneficiary wallets, allocation, and inactivity period in under 2 minutes.',
     href: '/create',
     cta: 'Start Creating',
+    external: false,
   },
   {
     title: 'Track Activity',
-    desc: 'Watch wallet-level activity signals and capsule status from a single dashboard.',
+    desc: 'Watch capsule state, beneficiary routing, and execution readiness from a single dashboard.',
     href: '/dashboard',
     cta: 'Open Dashboard',
+    external: false,
   },
   {
-    title: 'Mobile Demo',
-    desc: 'Run the Seeker-native flow and sign extension actions directly from Android.',
-    href: 'https://seeker.solanamobile.com',
-    cta: 'Download APK',
-    external: true,
+    title: 'Intent Delivery',
+    desc: 'Open your capsules and trigger encrypted Chainlink CRE delivery when conditions are met.',
+    href: '/capsules',
+    cta: 'Open Capsules',
+    external: false,
   },
 ]
 
 const proofMetrics = [
-  { label: 'Chains', value: 'Solana-first' },
+  { label: 'Network', value: 'Injective EVM' },
   { label: 'Execution', value: 'Permissionless' },
-  { label: 'Privacy', value: 'PER (TEE)' },
-  { label: 'Runtime', value: 'Automatic' },
+  { label: 'Delivery', value: 'Chainlink CRE' },
+  { label: 'Wallets', value: 'AppKit + WC' },
+]
+
+const orbitPartners = [
+  { name: 'Injective', href: 'https://injective.com', color: '#25D0FF', logo: '/logos/inj.png' },
+  { name: 'Chainlink', href: 'https://chain.link', color: '#2A5ADA', logo: '/logos/chainlink.svg' },
+  { name: 'AppKit', href: 'https://reown.com/appkit', color: '#22A9E0', logo: '/logos/appkit.svg' },
+  { name: 'WalletConnect', href: 'https://walletconnect.com', color: '#3B82F6', logo: '/logos/walletconnect.svg' },
+  { name: 'Rainbow', href: 'https://rainbow.me', color: '#FF8A00', logo: '/logos/rainbow.svg' },
+  { name: 'MetaMask', href: 'https://metamask.io', color: '#F97316', logo: '/logos/metamask.svg' },
 ]
 
 /* Why Heres benefit-focused cards */
 const whyHeresCards = [
   {
     title: 'Your intent, executed when it matters',
-    description: 'Leave instructions that run only when the time is right. No one can execute early. Your conditions stay yours until the moment you chose.',
+    description: 'Leave instructions that run only when the time is right. Capsule conditions resolve on-chain only when your chosen trigger is actually reached.',
     image: '/why-Heres-1.png',
     href: '/create',
   },
   {
-    title: 'Privacy by design',
-    description: 'Your conditions stay private. Only the outcome is visible on-chain. No third party sees your rules. Just the result when silence becomes truth.',
+    title: 'Secure delivery by design',
+    description: 'Intent delivery stays encrypted until the right moment. Chainlink CRE handles secure off-chain delivery while settlement remains visible on-chain.',
     image: '/why-Heres-2.png',
     href: '/dashboard',
   },
   {
     title: "Set it once. It runs when you're silent.",
-    description: 'Define your intent once. No bridges, no middlemen. When your conditions are met, execution happens automatically, the way you wanted.',
+    description: 'Define your intent once. When time or inactivity conditions are met, anyone can finalize execution on Injective the way you intended.',
     image: '/why-Heres-3.png',
     href: '/create',
   },
@@ -279,7 +290,7 @@ export default function HomePage() {
           {/* Description + CTAs */}
           <div className="mt-12 sm:mt-14 text-center" data-hero-below-capsule>
             <p className="mx-auto max-w-2xl text-base sm:text-lg text-Heres-muted leading-relaxed">
-              Create once, then let Heres monitor silently. When inactivity conditions are met, execution finalizes on Solana without manual intervention.
+              Create once, then let Heres track the capsule silently. When inactivity conditions are met, execution finalizes on Injective without manual intervention.
             </p>
             <div className="mt-10 flex flex-wrap justify-center gap-4">
               <Link
@@ -344,13 +355,13 @@ export default function HomePage() {
               Why Build With Heres?
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-center text-Heres-muted hidden">
-              Capsules on Solana, private logic in Magicblock PER (TEE), execution when you&apos;re silent.
+              Capsules on Injective, encrypted delivery through Chainlink CRE, execution when you&apos;re silent.
             </p>
           </div>
 
           <div data-why-heading className="mx-auto mt-4 max-w-2xl text-center">
             <p className="why-build-subtitle text-lg font-medium font-display uppercase tracking-wide">Your development environment</p>
-            <p className="why-build-desc mt-2">Everything you need to build privacy-preserving capsules on Solana.</p>
+            <p className="why-build-desc mt-2">Everything you need to build capsule-based execution on Injective.</p>
           </div>
 
           <div className="mt-20 grid gap-12 lg:grid-cols-2 lg:gap-20 lg:items-center">
@@ -403,15 +414,15 @@ export default function HomePage() {
             <div ref={whyVisualMainRef} className="relative w-full md:min-w-0 md:flex-1 lg:max-w-[900px]">
               <div className="why-build-flow-wrap relative flex flex-col md:flex-row md:items-stretch md:gap-0 md:pl-2 md:pr-4">
                 <div className="relative mt-4 flex w-full flex-col items-center text-white md:mt-0 md:w-full md:scale-100">
-                  {/* 1. Solana Devnet */}
+                  {/* 1. Injective EVM */}
                   <div
                     className="z-10 flex w-full justify-center"
                     style={{ opacity: activeWhyIndex >= 0 ? 1 : 0.4, transform: activeWhyIndex >= 0 ? 'scale(1)' : 'scale(0.98)', transition: 'opacity 0.3s, transform 0.3s' }}
                   >
                     <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-sm p-3 text-center md:p-4 w-[164px]">
                       <div className="flex items-center justify-center gap-2 font-display text-sm md:text-base text-white whitespace-nowrap uppercase tracking-wide">
-                        <Image src="/logos/solana.svg" alt="Solana" width={24} height={24} className="shrink-0" unoptimized />
-                        <span>Solana Devnet</span>
+                        <Image src="/logos/inj.png" alt="Injective" width={24} height={24} className="shrink-0" unoptimized />
+                        <span>Injective EVM</span>
                       </div>
                     </div>
                   </div>
@@ -446,13 +457,13 @@ export default function HomePage() {
                       </div>
                     ))}
                   </div>
-                  {/* Tokens or NFTs */}
+                  {/* Value + metadata */}
                   <div
                     className="z-20 flex w-full justify-center"
                     style={{ opacity: activeWhyIndex >= 0 ? 1 : 0.4, transform: activeWhyIndex >= 0 ? 'scale(1)' : 'scale(0.95)', transition: 'opacity 0.3s, transform 0.3s' }}
                   >
                     <div className="rounded-lg w-[140px] whitespace-nowrap border border-white/[0.08] bg-white/[0.03] px-1.5 py-1 text-center font-display text-[11px] uppercase leading-none tracking-wider text-white/50">
-                      Tokens or NFTs
+                      Value + Metadata
                     </div>
                   </div>
                   {/* Parallel dashed lines again */}
@@ -466,33 +477,33 @@ export default function HomePage() {
                       </div>
                     ))}
                   </div>
-                  {/* 3. Magicblock PER (TEE) */}
+                  {/* 3. Chainlink CRE */}
                   <div
                     className="relative z-20 flex w-full justify-center"
                     style={{ opacity: activeWhyIndex >= 1 ? 1 : 0.4, transform: activeWhyIndex >= 1 ? 'scale(1)' : 'scale(0.95)', transition: 'opacity 0.3s, transform 0.3s' }}
                   >
                     <div className="flex flex-col items-center gap-1 rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-sm px-3 py-2 leading-none md:px-4 md:py-2.5 min-w-[220px] w-[220px]">
                       <div className="flex items-center gap-2 justify-center whitespace-nowrap">
-                        <Image src="/logos/magicblock.svg" alt="Magicblock" width={20} height={20} className="shrink-0" unoptimized />
-                        <span className="font-display text-[11px] uppercase tracking-wider text-white/60">Magicblock PER (TEE)</span>
+                        <Image src="/logos/chainlink.svg" alt="Chainlink" width={20} height={20} className="shrink-0" unoptimized />
+                        <span className="font-display text-[11px] uppercase tracking-wider text-white/60">Chainlink CRE</span>
                       </div>
-                      <span className="font-display text-[9px] uppercase tracking-widest text-white/30">Privacy</span>
+                      <span className="font-display text-[9px] uppercase tracking-widest text-white/30">Encrypted Delivery</span>
                     </div>
                   </div>
                   <div className="relative flex justify-center">
                     <DashedLine height={30} segmentIndex={2} activeWhyIndex={activeWhyIndex} />
                   </div>
-                  {/* 4. Monitoring */}
+                  {/* 4. Wallet Layer */}
                   <div
                     className="z-10 flex w-full justify-center"
                     style={{ opacity: activeWhyIndex >= 1 ? 1 : 0.4, transform: activeWhyIndex >= 1 ? 'scale(1)' : 'scale(0.98)', transition: 'opacity 0.3s, transform 0.3s' }}
                   >
                     <div className="flex flex-col items-center gap-1 rounded-xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-sm px-3 py-2 leading-none md:px-4 md:py-2.5 w-[164px]">
                       <div className="flex items-center gap-2 justify-center leading-none">
-                        <Image src="/logos/helius.svg" alt="Helius" width={18} height={18} className="shrink-0" unoptimized />
-                        <span className="font-display text-[11px] uppercase tracking-wider text-white/60">Monitoring</span>
+                        <Image src="/logos/walletconnect.svg" alt="WalletConnect" width={18} height={18} className="shrink-0" unoptimized />
+                        <span className="font-display text-[11px] uppercase tracking-wider text-white/60">Wallet Layer</span>
                       </div>
-                      <span className="font-display text-[10px] uppercase tracking-wider text-white/40 leading-none">Helius RPC</span>
+                      <span className="font-display text-[10px] uppercase tracking-wider text-white/40 leading-none">WalletConnect + MetaMask</span>
                     </div>
                   </div>
                   <div className="relative flex justify-center">
@@ -511,7 +522,7 @@ export default function HomePage() {
                       />
                       <div className="relative z-10">
                         <div className="font-display text-sm font-bold uppercase tracking-wide text-white">Execution</div>
-                        <div className="mt-1.5 whitespace-nowrap font-display text-[10px] uppercase tracking-widest text-white/50">Auto execute to Devnet</div>
+                        <div className="mt-1.5 whitespace-nowrap font-display text-[10px] uppercase tracking-widest text-white/50">Execute on Injective</div>
                       </div>
                     </div>
                   </div>
@@ -532,7 +543,7 @@ export default function HomePage() {
               How It Works
             </h2>
             <p className="mx-auto mt-5 max-w-2xl text-Heres-muted leading-relaxed">
-              With Heres, define your intent once on Solana. Magicblock PER (TEE) monitors privately; execution runs on Devnet when conditions are met.
+              With Heres, define your intent once on Injective. Chainlink CRE handles encrypted delivery, and execution completes on-chain when conditions are met.
             </p>
           </div>
 
@@ -545,7 +556,7 @@ export default function HomePage() {
                 <h3 className="font-display text-xl font-bold uppercase tracking-tight text-Heres-white">Create</h3>
               </div>
               <p className="text-sm text-Heres-muted leading-relaxed">
-                Create a capsule to define beneficiaries, amounts, and inactivity period on Solana Devnet.
+                Create a capsule to define beneficiaries, amounts, and inactivity period on Injective EVM.
               </p>
               <div className="mt-6 flex-1 overflow-hidden rounded-xl border border-white/[0.06] bg-black/20">
                 <div className="relative h-full min-h-[200px] w-full">
@@ -569,25 +580,22 @@ export default function HomePage() {
             <div data-gsap-step className="card-bento group flex flex-col p-6 sm:p-8">
               <div className="flex items-center gap-3 mb-4">
                 <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-Heres-purple/10 font-display text-sm font-bold text-Heres-purple">02</span>
-                <h3 className="font-display text-xl font-bold uppercase tracking-tight text-Heres-white">Delegate</h3>
+                <h3 className="font-display text-xl font-bold uppercase tracking-tight text-Heres-white">Commit</h3>
               </div>
               <p className="text-sm text-Heres-muted leading-relaxed">
-                Create and delegate your capsule with Anchor. Capsule PDA is derived from owner; delegate to Magicblock PER (TEE) for private monitoring.
+                Write the capsule on-chain through the Injective contract. Beneficiary, timing, and metadata are committed in a single EVM transaction.
               </p>
               <div className="mt-6 flex-1 overflow-hidden rounded-xl border border-white/[0.06] bg-[#0a0d14] p-4 font-mono text-xs leading-relaxed">
                 <pre className="whitespace-pre-wrap break-words text-[11px] sm:text-xs">
                   <code>
-                    <span className="text-Heres-muted">const tx = await program.methods</span>{'\n'}
-                    <span className="text-Heres-muted">  .createCapsule(</span>{'\n'}
-                    <span className="text-Heres-muted">    new BN(inactivityPeriodSeconds),</span>{'\n'}
-                    <span className="text-Heres-muted">    intentDataBuffer</span>{'\n'}
-                    <span className="text-Heres-muted">  )</span>{'\n'}
-                    <span className="text-Heres-muted">  .accounts(</span>{'\n'}
-                    <span className="text-Heres-cyan">    capsule</span>: capsulePDA,{'\n'}
-                    <span className="text-Heres-cyan">    owner</span>: wallet.publicKey,{'\n'}
-                    <span className="text-Heres-cyan">    systemProgram</span>: SystemProgram.programId{'\n'}
-                    <span className="text-Heres-muted">  )</span>{'\n'}
-                    <span className="text-Heres-muted">  .rpc()</span>
+                    <span className="text-Heres-muted">const hash = await walletClient.writeContract(</span>{'\n'}
+                    <span className="text-Heres-muted">  {'{'}</span>{'\n'}
+                    <span className="text-Heres-cyan">    address</span>: capsuleManager,{'\n'}
+                    <span className="text-Heres-cyan">    functionName</span>: 'createCapsule',{'\n'}
+                    <span className="text-Heres-cyan">    args</span>: [beneficiary, 1, executeAt, heartbeatWindow, metadataHash],{'\n'}
+                    <span className="text-Heres-cyan">    value</span>: parseEther(amount){'\n'}
+                    <span className="text-Heres-muted">  {'}'}</span>{'\n'}
+                    <span className="text-Heres-muted">)</span>
                   </code>
                 </pre>
               </div>
@@ -601,16 +609,16 @@ export default function HomePage() {
             <div data-gsap-step className="card-bento group flex flex-col p-6 sm:p-8">
               <div className="flex items-center gap-3 mb-4">
                 <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-Heres-accent/10 font-display text-sm font-bold text-Heres-accent">03</span>
-                <h3 className="font-display text-xl font-bold uppercase tracking-tight text-Heres-white">Serve</h3>
+                <h3 className="font-display text-xl font-bold uppercase tracking-tight text-Heres-white">Execute</h3>
               </div>
               <p className="text-sm text-Heres-muted leading-relaxed">
-                View and manage your capsules. Execution runs on Devnet when inactivity is met. No third party.
+                View and manage your capsules. When the condition is met, execution settles on Injective and CRE delivery can be dispatched from the same product flow.
               </p>
               <div className="mt-6 flex-1 overflow-hidden rounded-xl border border-white/[0.06] bg-black/20">
                 <div className="relative h-full min-h-[200px] w-full">
                   <Image
                     src="/how-it-works-step3.png"
-                    alt="Heres Capsules dashboard - status, PER (TEE) execution, verification"
+                    alt="Heres Capsules dashboard - status, execution, verification"
                     fill
                     className="object-cover object-top transition-transform duration-700 group-hover:scale-[1.02]"
                     sizes="(max-width: 768px) 100vw, 33vw"
@@ -629,7 +637,7 @@ export default function HomePage() {
 
       <div className="glow-line" />
 
-      {/* Heres on Solana Mobile */}
+      {/* Heres on Injective */}
       <section className="relative py-24 sm:py-32 overflow-hidden">
         {/* Background accent */}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-Heres-purple/[0.02] to-transparent" aria-hidden />
@@ -653,25 +661,23 @@ export default function HomePage() {
             <div className="order-1 lg:order-2">
               <span className="tag-pill mb-6">
                 <span className="accent-dot" />
-                Solana Mobile Seeker
+                Injective EVM Web App
               </span>
               <h2 className="font-display text-3xl font-bold uppercase tracking-tight leading-tight text-Heres-white sm:text-4xl lg:text-5xl">
                 Set it once.{' '}
-                <span className="text-shimmer">It runs forever.</span>
+                <span className="text-shimmer">It settles on-chain.</span>
               </h2>
               <p className="mt-6 text-lg leading-relaxed text-Heres-muted">
-                Download the APK, tap a few times, and leave a will-like intent: who gets your assets and after how long of inactivity. Your capsule lives on Solana. Delete the app tomorrow. Execution still runs and distributes to your beneficiaries.
+                Open the web app, define the beneficiary, choose a time or inactivity trigger, and fund the capsule. Your capsule lives on Injective and stays visible in the same Heres dashboard throughout execution.
               </p>
               <p className="mt-4 text-base leading-relaxed text-white/30">
-                The future is uncertain. Set your capsule while you hold the keys.
+                The product stays familiar. The execution engine is now Injective.
               </p>
               <Link
-                href="https://seeker.solanamobile.com"
-                target="_blank"
-                rel="noopener noreferrer"
+                href="/create"
                 className="mt-8 inline-flex items-center gap-2 btn-secondary rounded-full py-3.5"
               >
-                Download APK
+                Open Create Flow
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
               </Link>
             </div>
@@ -695,7 +701,7 @@ export default function HomePage() {
                 <span className="text-shimmer">Heres</span>
               </h2>
               <p className="mt-8 text-lg leading-relaxed text-Heres-muted">
-                Define your intent once: beneficiaries, amounts, inactivity period. Your capsule lives on Solana; Magicblock PER (TEE) monitors privately. When silence becomes truth, execution runs on Devnet. No third party, no bridges.
+                Define your intent once: beneficiary, amount, inactivity period, and delivery details. Your capsule lives on Injective, encrypted delivery stays available through Chainlink CRE, and execution settles on-chain when silence becomes truth.
               </p>
               <Link href="/create" className="mt-10 inline-block btn-primary rounded-full px-10 py-4 text-sm">
                 Create Your Capsule
@@ -720,10 +726,10 @@ export default function HomePage() {
             The Possibilities Are Limitless
           </h2>
           <p className="mx-auto mt-1 text-center font-display text-lg uppercase tracking-wide text-Heres-accent/60">
-            All On Solana
+            Built for Injective
           </p>
           <p className="mx-auto mt-5 max-w-2xl text-center text-Heres-muted">
-            Heres uses Solana for persistence, Magicblock PER (TEE) for private execution, Helius for RPC, Phantom and Backpack for wallets, and Solana Mobile Seeker for the APK.
+            Heres now uses Injective EVM for settlement, Chainlink CRE for encrypted intent delivery, and AppKit, WalletConnect, Rainbow, and MetaMask for wallet access.
           </p>
         </div>
         <div className="partners-content relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -749,15 +755,7 @@ export default function HomePage() {
                 } as React.CSSProperties}
               >
                 {(() => {
-                  const partners = [
-                    { name: 'Solana', href: 'https://solana.com', color: '#9945FF', logo: '/logos/solana.svg' },
-                    { name: 'Solana Mobile Seeker', href: 'https://seeker.solanamobile.com', color: '#ffffff', logo: '/logos/solana-mobile-seeker.png' },
-                    { name: 'Phantom', href: 'https://phantom.app', color: '#ab9ff2', logo: '/logos/phantom.svg' },
-                    { name: 'Helius', href: 'https://helius.dev', color: '#f97316', logo: '/logos/helius.svg' },
-                    { name: 'Backpack', href: 'https://backpack.app', color: '#E33E3F', logo: '/logos/backpack.png' },
-                    { name: 'Magicblock', href: 'https://www.magicblock.xyz', color: '#22d3ee', logo: '/logos/magicblock.svg' },
-                  ]
-                  const items = Array.from({ length: ring.count }, (_, i) => partners[i % partners.length])
+                  const items = Array.from({ length: ring.count }, (_, i) => orbitPartners[i % orbitPartners.length])
                   return items.map((p, i) => {
                     const angleDeg = (360 / ring.count) * i
                     const angleRad = (angleDeg * Math.PI) / 180
@@ -792,7 +790,7 @@ export default function HomePage() {
             {/* Central content */}
             <div className="relative z-10 max-w-lg text-center">
               <h2 className="font-display text-6xl font-bold tracking-tight text-white sm:text-7xl lg:text-8xl">
-                5+
+                6+
               </h2>
               <h3 className="mt-2 font-display text-xl font-semibold uppercase tracking-wide text-white/60 sm:text-2xl">
                 Powered by

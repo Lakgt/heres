@@ -70,13 +70,13 @@ export function Footer() {
           </p>
           <div className="flex items-center gap-4">
             <a
-              href="https://solana.com"
+              href="https://injective.com"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 rounded-lg border border-Heres-border bg-Heres-card/80 px-4 py-2 text-sm text-Heres-white transition-colors hover:border-Heres-accent/40"
             >
-              <Image src="/logos/solana.svg" alt="Solana" width={20} height={20} className="h-5 w-5 shrink-0" />
-              <span className="font-medium">Powered by Solana</span>
+              <Image src="/logos/inj.png" alt="Injective" width={20} height={20} className="h-5 w-5 shrink-0" unoptimized />
+              <span className="font-medium">Powered by Injective</span>
             </a>
           </div>
         </div>
