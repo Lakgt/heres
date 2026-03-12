@@ -1,8 +1,8 @@
 import 'server-only'
 
 import { createHmac } from 'crypto'
-import { PublicKey } from '@solana/web3.js'
 import { parseIntentPayload } from '@/utils/intent'
+import { getActiveChain } from '@/config/blockchain'
 import { safeEqualHex, sha256Hex } from '@/lib/cre/auth'
 import {
   DispatchCreDeliveryResult,
@@ -17,7 +17,7 @@ import {
   upsertDeliveryLedger,
   upsertCreSecret,
 } from '@/lib/cre/store'
-import { fetchCapsuleStateByAddress, fetchCapsuleStateByOwner } from '@/lib/cre/solana'
+import { fetchCreCapsuleStateByAddress, fetchCreCapsuleStateByOwner } from '@/lib/cre/capsule-state'
 
 type RegisterSecretInput = {
   owner: string
@@ -133,14 +133,12 @@ export async function registerCreSecret(input: RegisterSecretInput): Promise<{
 export async function dispatchCreDeliveryForCapsule(
   capsuleAddressRaw: string
 ): Promise<DispatchCreDeliveryResult> {
-  let capsuleAddress: PublicKey
-  try {
-    capsuleAddress = new PublicKey(capsuleAddressRaw)
-  } catch {
+  const capsuleAddress = capsuleAddressRaw.trim()
+  if (!capsuleAddress) {
     return { ok: false, error: 'Invalid capsule address' }
   }
 
-  const capsule = await fetchCapsuleStateByAddress(capsuleAddress)
+  const capsule = await fetchCreCapsuleStateByAddress(capsuleAddress)
   if (!capsule) return { ok: false, error: 'Capsule not found' }
   if (!capsule.executedAt) return { ok: true, skipped: true, reason: 'Capsule is not executed yet' }
 
@@ -187,7 +185,7 @@ export async function dispatchCreDeliveryForCapsule(
   if (!secret) {
     await upsertDeliveryLedger(idempotencyKey, {
       capsuleAddress: capsule.capsuleAddress,
-      owner: capsule.owner.toBase58(),
+      owner: capsule.ownerAddress,
       executedAt: capsule.executedAt,
       secretRef: creConfig.secretRef,
       status: 'failed',
@@ -197,10 +195,10 @@ export async function dispatchCreDeliveryForCapsule(
     return { ok: false, error: 'Secret ref not found in registry', idempotencyKey, status: 'failed' }
   }
 
-  if (secret.owner !== capsule.owner.toBase58()) {
+  if (secret.owner !== capsule.ownerAddress) {
     await upsertDeliveryLedger(idempotencyKey, {
       capsuleAddress: capsule.capsuleAddress,
-      owner: capsule.owner.toBase58(),
+      owner: capsule.ownerAddress,
       executedAt: capsule.executedAt,
       recipientEmail: secret.recipientEmail,
       secretRef: creConfig.secretRef,
@@ -214,7 +212,7 @@ export async function dispatchCreDeliveryForCapsule(
   if (!safeEqualHex(secret.secretHash, creConfig.secretHash)) {
     await upsertDeliveryLedger(idempotencyKey, {
       capsuleAddress: capsule.capsuleAddress,
-      owner: capsule.owner.toBase58(),
+      owner: capsule.ownerAddress,
       executedAt: capsule.executedAt,
       recipientEmail: secret.recipientEmail,
       secretRef: creConfig.secretRef,
@@ -228,7 +226,7 @@ export async function dispatchCreDeliveryForCapsule(
   if (!safeEqualHex(secret.recipientEmailHash, creRecipientHash)) {
     await upsertDeliveryLedger(idempotencyKey, {
       capsuleAddress: capsule.capsuleAddress,
-      owner: capsule.owner.toBase58(),
+      owner: capsule.ownerAddress,
       executedAt: capsule.executedAt,
       recipientEmail: secret.recipientEmail,
       secretRef: creConfig.secretRef,
@@ -241,7 +239,7 @@ export async function dispatchCreDeliveryForCapsule(
 
   await upsertDeliveryLedger(idempotencyKey, {
     capsuleAddress: capsule.capsuleAddress,
-    owner: capsule.owner.toBase58(),
+    owner: capsule.ownerAddress,
     executedAt: capsule.executedAt,
     recipientEmail: secret.recipientEmail,
     secretRef: creConfig.secretRef,
@@ -254,7 +252,7 @@ export async function dispatchCreDeliveryForCapsule(
       idempotencyKey,
       recipientEmail: secret.recipientEmail,
       capsuleAddress: capsule.capsuleAddress,
-      owner: capsule.owner.toBase58(),
+      owner: capsule.ownerAddress,
       executedAt: capsule.executedAt,
       secretRef: creConfig.secretRef,
       secretHash: creConfig.secretHash,
@@ -262,7 +260,7 @@ export async function dispatchCreDeliveryForCapsule(
     })
     await upsertDeliveryLedger(idempotencyKey, {
       capsuleAddress: capsule.capsuleAddress,
-      owner: capsule.owner.toBase58(),
+      owner: capsule.ownerAddress,
       executedAt: capsule.executedAt,
       recipientEmail: secret.recipientEmail,
       secretRef: creConfig.secretRef,
@@ -274,7 +272,7 @@ export async function dispatchCreDeliveryForCapsule(
     const message = error instanceof Error ? error.message : String(error)
     await upsertDeliveryLedger(idempotencyKey, {
       capsuleAddress: capsule.capsuleAddress,
-      owner: capsule.owner.toBase58(),
+      owner: capsule.ownerAddress,
       executedAt: capsule.executedAt,
       recipientEmail: secret.recipientEmail,
       secretRef: creConfig.secretRef,
@@ -320,6 +318,14 @@ export function verifyCreCallbackSignature(rawBody: string, signature: string | 
   return safeEqualHex(expected, signature)
 }
 
+export function verifyCreCallbackAuthorization(authHeader: string | null): boolean {
+  const secret = getRequiredEnv('CHAINLINK_CRE_CALLBACK_SECRET')
+  if (!secret) return false
+  const expected = `Bearer ${secret}`
+  if (!authHeader || authHeader.length !== expected.length) return false
+  return safeEqualHex(Buffer.from(authHeader).toString('hex'), Buffer.from(expected).toString('hex'))
+}
+
 export async function getDeliveryStatus(capsuleAddress: string): Promise<CreDeliveryLedgerRecord[]> {
   return await listDeliveryByCapsule(capsuleAddress)
 }
@@ -330,20 +336,24 @@ export async function reconcileCreDeliveries(): Promise<{
   dispatched: number
   failed: number
 }> {
+  if (getActiveChain() === 'injective-evm') {
+    const { reconcileInjectiveCreDeliveries } = await import('@/lib/injective/executor')
+    const result = await reconcileInjectiveCreDeliveries()
+    return {
+      scanned: result.scanned,
+      executedCreCapsules: result.executedCapsules,
+      dispatched: result.dispatched,
+      failed: result.failed,
+    }
+  }
+
   const secrets = await listCreSecrets()
   let executedCreCapsules = 0
   let dispatched = 0
   let failed = 0
 
   for (const secret of secrets) {
-    let owner: PublicKey
-    try {
-      owner = new PublicKey(secret.owner)
-    } catch {
-      continue
-    }
-
-    const capsule = await fetchCapsuleStateByOwner(owner)
+    const capsule = await fetchCreCapsuleStateByOwner(secret.owner)
     if (!capsule?.executedAt) continue
 
     const parsed = parseIntentPayload(capsule.intentData)

@@ -52,7 +52,7 @@ export function HeresPromoReel({ className = '' }: { className?: string }) {
   const txLinesRef = useRef<HTMLDivElement>(null)
   const title5Ref = useRef<HTMLDivElement>(null)
   const ctaRef = useRef<HTMLDivElement>(null)
-  const solanaLogoRef = useRef<HTMLDivElement>(null)
+  const injectiveLogoRef = useRef<HTMLDivElement>(null)
   const fadeRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -216,9 +216,9 @@ export function HeresPromoReel({ className = '' }: { className?: string }) {
       )
       tl.fromTo(ctaRef.current, { opacity: 0 }, { opacity: 1, duration: 0.3 }, SEG4 + 0.4)
       tl.fromTo(capsuleWrapRef.current, { opacity: 0 }, { opacity: 1, duration: 0.2 }, SEG4 + 0.2)
-      tl.fromTo(solanaLogoRef.current, { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.5 }, SEG4 + 0.5)
+      tl.fromTo(injectiveLogoRef.current, { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.5 }, SEG4 + 0.5)
       tl.to(capsuleWrapRef.current, { opacity: 0, duration: 0.3 }, SEG4 + 0.5)
-      tl.to([title5Ref.current, ctaRef.current, solanaLogoRef.current], { opacity: 0, duration: 0.4 }, SEG5 - 0.5)
+      tl.to([title5Ref.current, ctaRef.current, injectiveLogoRef.current], { opacity: 0, duration: 0.4 }, SEG5 - 0.5)
       tl.to(fadeRef.current, { opacity: 1, duration: PROMO_SCENE5.GLOBAL_FADE_OUT.DURATION_S }, SEG5 - 0.5)
       tl.to(fadeRef.current, { opacity: 0, duration: 0.1 }, SEG5)
     }, containerRef)
@@ -304,8 +304,8 @@ export function HeresPromoReel({ className = '' }: { className?: string }) {
       <div ref={flashRef} className="promo-abs inset-0 promo-flash opacity-0 pointer-events-none" />
 
       {/* Scene 5: 12??5s ??濡쒓퀬쨌??댄?쨌CTA ?몃줈 媛꾧꺽 遺꾨━, 寃뱀묠 諛⑹? */}
-      <div ref={solanaLogoRef} className="promo-abs center top-[24%] opacity-0">
-        <Image src="/logos/solana.svg" alt="Solana" width={64} height={64} className="h-12 w-auto sm:h-16" />
+      <div ref={injectiveLogoRef} className="promo-abs center top-[24%] opacity-0">
+        <Image src="/logos/inj.png" alt="Injective" width={64} height={64} className="h-12 w-auto sm:h-16" />
       </div>
       <div ref={title5Ref} className="promo-abs center top-[44%] text-center opacity-0">
         <p className="text-base font-bold sm:text-lg leading-snug">{PROMO_SCENE5.TEXT_TITLE}</p>

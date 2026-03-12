@@ -56,7 +56,10 @@ type IntentParsed =
     intent?: string
     totalAmount?: string
     beneficiaries?: any[]
+    conditionType?: 'time' | 'heartbeat'
+    targetDate?: string
     inactivityDays?: number
+    inactivityMinutes?: number
     delayDays?: number
     cre?: {
       enabled?: boolean
@@ -81,7 +84,10 @@ type IntentParsed =
     intent?: string
     nftMints?: string[]
     nftRecipients?: string[]
+    conditionType?: 'time' | 'heartbeat'
+    targetDate?: string
     inactivityDays?: number
+    inactivityMinutes?: number
     delayDays?: number
     cre?: {
       enabled?: boolean
@@ -423,6 +429,47 @@ export default function CapsuleDetailPage() {
     return () => { cancelled = true }
   }, [capsuleAddress, isCreEnabled, ownerAddress, wallet.connected, wallet.address, wallet.signMessage, isOwner])
 
+  useEffect(() => {
+    if (!isInjectiveCapsule || !capsule?.id || capsule.executedAt || capsule.cancelled) return
+
+    const nowSeconds = Math.floor(Date.now() / 1000)
+    const isReady = capsule.conditionKind === 'time'
+      ? Boolean(capsule.executeAt && capsule.executeAt <= nowSeconds)
+      : capsule.lastActivity + capsule.inactivityPeriod <= nowSeconds
+
+    if (!isReady) return
+
+    let cancelled = false
+
+    const attemptAutoExecution = async () => {
+      try {
+        const response = await fetch('/api/injective/auto-execute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ capsuleId: capsule.id }),
+        })
+        const data = await response.json()
+        if (cancelled || !response.ok) return
+        if (data.status === 'executed') {
+          await refreshCapsule()
+          if (!cancelled) {
+            setActionResult({ type: 'success', message: `Auto-executed capsule TX: ${data.txHash}` })
+          }
+        }
+      } catch {
+        // Ignore public auto-execution polling failures and keep manual execution available.
+      }
+    }
+
+    attemptAutoExecution()
+    const interval = window.setInterval(attemptAutoExecution, 15000)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+    }
+  }, [capsule?.cancelled, capsule?.conditionKind, capsule?.executeAt, capsule?.executedAt, capsule?.id, capsule?.inactivityPeriod, capsule?.lastActivity, isInjectiveCapsule])
+
   // Token: SOL price chart from CoinGecko (with range filter)
   const rangeConfig = useMemo(() => CHART_RANGES.find((r) => r.key === chartRange) ?? CHART_RANGES[2], [chartRange])
   useEffect(() => {
@@ -530,13 +577,17 @@ export default function CapsuleDetailPage() {
     )
   }
 
+  const nowSeconds = Math.floor(Date.now() / 1000)
+  const isReady = capsule.conditionKind === 'time'
+    ? Boolean(capsule.executeAt && capsule.executeAt <= nowSeconds && !capsule.executedAt)
+    : capsule.lastActivity + capsule.inactivityPeriod < nowSeconds
   const status = capsule.executedAt
     ? 'Executed'
     : capsule.cancelled
       ? 'Cancelled'
     : !capsule.isActive
       ? 'Waiting'
-      : capsule.lastActivity + capsule.inactivityPeriod < Math.floor(Date.now() / 1000)
+      : isReady
         ? 'Expired'
         : 'Active'
   const isDelegated = !isInjectiveCapsule && (capsule.accountOwner?.equals?.(new PublicKey(MAGICBLOCK_ER.DELEGATION_PROGRAM_ID)) ?? false)
@@ -590,8 +641,10 @@ export default function CapsuleDetailPage() {
               </p>
             </div>
             <p className="mt-3 text-sm text-Heres-muted max-w-xl">
-              {isNft ? 'NFT capsule' : isInjectiveCapsule ? 'Token capsule' : 'Token (SOL) capsule'} · Inactivity period:{' '}
-              {formatDuration(capsule.inactivityPeriod)}
+              {isNft ? 'NFT capsule' : isInjectiveCapsule ? 'Token capsule' : 'Token (SOL) capsule'} · {' '}
+              {isInjectiveCapsule && capsule.conditionKind === 'time'
+                ? `Executes on ${capsule.executeAt ? new Date(capsule.executeAt * 1000).toLocaleDateString() : 'scheduled date'}`
+                : `Inactivity period: ${formatDuration(capsule.inactivityPeriod)}`}
             </p>
           </section>
 
@@ -827,13 +880,16 @@ export default function CapsuleDetailPage() {
                 <div className="rounded-lg border border-Heres-border/50 bg-Heres-surface/30 p-3 mb-5">
                   {isActive && (
                     <p className="text-sm text-Heres-muted">
-                      Capsule is <span className="text-Heres-accent font-medium">Active</span>. The inactivity period has not elapsed yet.
+                      Capsule is <span className="text-Heres-accent font-medium">Active</span>.{' '}
+                      {isInjectiveCapsule && capsule.conditionKind === 'time'
+                        ? 'The scheduled execution date has not been reached yet.'
+                        : 'The inactivity period has not elapsed yet.'}
                       {canHeartbeat ? ' You can send a heartbeat to extend the inactivity deadline.' : ' Actions will become available once the capsule expires.'}
                     </p>
                   )}
                   {canExecute && (
                     <p className="text-sm text-amber-400">
-                      Inactivity period has elapsed. You can now <strong>{executeLabel}</strong>{isInjectiveCapsule ? ' to release funds on-chain.' : ' to deactivate the capsule, then distribute assets.'}
+                      {isInjectiveCapsule && capsule.conditionKind === 'time' ? 'The scheduled execution date has arrived.' : 'Inactivity period has elapsed.'} You can now <strong>{executeLabel}</strong>{isInjectiveCapsule ? ' to release funds on-chain.' : ' to deactivate the capsule, then distribute assets.'}
                     </p>
                   )}
                   {isExecuted && !allDone && (

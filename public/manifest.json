@@ -1,7 +1,7 @@
 {
     "name": "Heres",
     "short_name": "Heres",
-    "description": "A privacy-preserving capsule protocol on Solana. Assets stay delegated, conditions stay private inside Magicblock ER, execution happens automatically when silence becomes truth.",
+    "description": "A capsule protocol on Injective EVM. Create capsules, set beneficiaries and conditions, and execute on-chain when silence becomes truth.",
     "categories": [
         "finance",
         "productivity",

@@ -4,11 +4,10 @@ const urlsToCache = [
   '/logo-white.png',
   '/logo-black.png',
   '/favicon.svg',
-  '/logos/solana.svg',
-  '/logos/phantom.svg',
-  '/logos/helius.svg',
-  '/logos/backpack.png',
-  '/logos/magicblock.svg'
+  '/logos/inj.png',
+  '/logos/injective.svg',
+  '/logos/chainlink.svg',
+  '/logos/walletconnect.svg'
 ];
 
 self.addEventListener('install', (event) => {

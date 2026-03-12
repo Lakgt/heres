@@ -18,6 +18,8 @@ export interface IntentData {
   intent: string
   beneficiaries: Beneficiary[]
   totalAmount?: string
+  conditionType?: 'time' | 'heartbeat'
+  targetDate?: string
   inactivityDays: number
   inactivityMinutes?: number
   delayDays: number
@@ -32,6 +34,8 @@ export interface NftIntentData {
   nftMints: string[]
   nftRecipients: string[]
   nftAssignments?: Record<string, number>
+  conditionType?: 'time' | 'heartbeat'
+  targetDate?: string
   inactivityDays: number
   inactivityMinutes?: number
   delayDays: number

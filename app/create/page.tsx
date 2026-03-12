@@ -64,10 +64,12 @@ export default function CreatePage() {
   const ownerAddress = wallet.address || publicKey?.toBase58() || null
   const injectiveMode = isInjectiveEvmChain()
   const assetSymbol = injectiveMode ? 'INJ' : 'SOL'
+  const injectiveConditionMode = injectiveMode && targetDate ? 'time' : 'heartbeat'
   const injectiveValidBeneficiaries = beneficiaries.filter((beneficiary) => beneficiary.address.trim())
   const hasValidExecutionCondition = Boolean(
-    (demoInactivityMinutes && parseInt(demoInactivityMinutes, 10) > 0) ||
-    (inactivityDays && parseInt(inactivityDays, 10) > 0)
+    injectiveMode
+      ? Boolean(targetDate || (demoInactivityMinutes && parseInt(demoInactivityMinutes, 10) > 0) || (inactivityDays && parseInt(inactivityDays, 10) > 0))
+      : Boolean(inactivityDays && parseInt(inactivityDays, 10) > 0)
   )
   const isInjectiveCreateReady =
     capsuleType === 'token' &&
@@ -204,17 +206,15 @@ export default function CreatePage() {
         setModifyCount(stored ? parseInt(stored, 10) || 0 : 0)
 
         try {
-          const capsule = await getCapsule(publicKey ?? ownerAddress)
-          // Only show warning if capsule is active AND not executed
-          // If capsule is executed, we can recreate it, so don't show warning
-          if (capsule && capsule.isActive && !capsule.executedAt) {
-            setExistingCapsule(true)
-          } else {
-            // Allow creation/recreation if:
-            // 1. Capsule doesn't exist
-            // 2. Capsule is executed (executedAt is set) - can recreate
-            // 3. Capsule exists but isActive is false
+          if (isInjectiveEvmChain()) {
             setExistingCapsule(false)
+          } else {
+            const capsule = await getCapsule(publicKey ?? ownerAddress)
+            if (capsule && capsule.isActive && !capsule.executedAt) {
+              setExistingCapsule(true)
+            } else {
+              setExistingCapsule(false)
+            }
           }
         } catch (err) {
           console.error('Error checking for existing capsule:', err)
@@ -414,6 +414,7 @@ export default function CreatePage() {
     try {
       const inactivityDaysNum = inactivityDays ? parseInt(inactivityDays, 10) : 0
       const inactivityMinutesNum = demoInactivityMinutes ? parseInt(demoInactivityMinutes, 10) : 0
+      const conditionType = injectiveConditionMode
       let intentData: Uint8Array
       let creMeta: {
         enabled: true
@@ -474,6 +475,8 @@ export default function CreatePage() {
           nftMints: selectedNftMints,
           nftRecipients: validRecipients,
           nftAssignments,
+          conditionType,
+          targetDate: conditionType === 'time' ? targetDate : undefined,
           inactivityDays: inactivityDaysNum,
           inactivityMinutes: inactivityMinutesNum > 0 ? inactivityMinutesNum : undefined,
           delayDays: parseInt(delayDays),
@@ -485,6 +488,8 @@ export default function CreatePage() {
           intent,
           beneficiaries,
           totalAmount,
+          conditionType,
+          targetDate: conditionType === 'time' ? targetDate : undefined,
           inactivityDays: inactivityDaysNum,
           inactivityMinutes: inactivityMinutesNum > 0 ? inactivityMinutesNum : undefined,
           delayDays: parseInt(delayDays),
@@ -492,8 +497,10 @@ export default function CreatePage() {
         })
       }
 
-      const inactivityPeriodSeconds = injectiveMode && inactivityMinutesNum > 0
-        ? inactivityMinutesNum * 60
+      const inactivityPeriodSeconds = injectiveMode && conditionType === 'time'
+        ? Math.max(Math.floor((new Date(`${targetDate}T00:00:00`).getTime() - Date.now()) / 1000), 60)
+        : injectiveMode && inactivityMinutesNum > 0
+          ? inactivityMinutesNum * 60
         : !injectiveMode && SOLANA_CONFIG.NETWORK === 'devnet' && inactivityDaysNum <= 30
           ? inactivityDaysNum * 60
           : daysToSeconds(inactivityDaysNum)
@@ -506,7 +513,7 @@ export default function CreatePage() {
         throw new Error('Wallet connection is incomplete for capsule creation.')
       }
       if (ownerRef) {
-        const existingCapsule = await getCapsule(ownerRef)
+        const existingCapsule = isInjectiveEvmChain() ? null : await getCapsule(ownerRef)
 
         if (existingCapsule && !existingCapsule.isActive && existingCapsule.executedAt) {
           // Executed capsule — recreate it
@@ -626,7 +633,7 @@ export default function CreatePage() {
         } else {
           // For other simulation failures, check if it's because capsule already exists
           try {
-            if (publicKey ?? ownerAddress) {
+            if (!isInjectiveEvmChain() && (publicKey ?? ownerAddress)) {
               const existingCapsule = await getCapsule((publicKey ?? ownerAddress) as any)
               if (existingCapsule && existingCapsule.isActive && !existingCapsule.executedAt) {
                 errorMessage = 'You already have an active capsule. Please deactivate it first or update the existing one.'
@@ -1169,8 +1176,11 @@ export default function CreatePage() {
                         value={targetDate}
                         onChange={(e) => {
                           setTargetDate(e.target.value)
-                          setDemoInactivityMinutes('')
-                          if (e.target.value) {
+                          if (injectiveMode) {
+                            setInactivityDays('')
+                            setDemoInactivityMinutes('')
+                          }
+                          if (!injectiveMode && e.target.value) {
                             const selectedDate = new Date(e.target.value)
                             const today = new Date()
                             today.setHours(0, 0, 0, 0)
@@ -1183,7 +1193,11 @@ export default function CreatePage() {
                         min={new Date().toISOString().split('T')[0]}
                         className="w-full rounded-xl border border-Heres-border bg-Heres-surface/80 p-4 text-Heres-white focus:outline-none focus:border-Heres-accent/50"
                       />
-                      {targetDate && inactivityDays && <p className="text-xs text-Heres-accent mt-2">{inactivityDays} days until execution</p>}
+                      {targetDate && (
+                        <p className="text-xs text-Heres-accent mt-2">
+                          {injectiveMode ? 'Executes on the selected date.' : inactivityDays ? `${inactivityDays} days until execution` : 'Future date selected.'}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm text-Heres-muted mb-2">Delay Window (days)</label>
@@ -1210,9 +1224,12 @@ export default function CreatePage() {
                       onChange={(e) => {
                         setInactivityDays(e.target.value)
                         setDemoInactivityMinutes('')
+                        if (injectiveMode) {
+                          setTargetDate('')
+                        }
                         if (e.target.value) {
                           const days = parseInt(e.target.value)
-                          if (days > 0) {
+                          if (!injectiveMode && days > 0) {
                             const d = new Date()
                             d.setDate(d.getDate() + days)
                             setTargetDate(d.toISOString().split('T')[0])
@@ -1270,7 +1287,9 @@ export default function CreatePage() {
                   </div>
                   <p className="text-sm text-Heres-muted mt-4">
                     {targetDate
-                      ? `Triggers on ${new Date(targetDate).toLocaleDateString()}, ${delayDays}-day delay.`
+                      ? injectiveMode
+                        ? `Executes on ${new Date(targetDate).toLocaleDateString()} via a real on-chain time condition.`
+                        : `Triggers on ${new Date(targetDate).toLocaleDateString()}, ${delayDays}-day delay.`
                       : demoInactivityMinutes
                         ? `After ${demoInactivityMinutes} minute${demoInactivityMinutes === '1' ? '' : 's'} of inactivity, ${delayDays}-day delay.`
                       : inactivityDays

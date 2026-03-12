@@ -8,7 +8,7 @@ class NodeWallet {
   async signTransaction(tx: any): Promise<any> { tx.partialSign(this.payer); return tx }
   async signAllTransactions(txs: any[]): Promise<any[]> { txs.forEach((tx: any) => tx.partialSign(this.payer)); return txs }
 }
-import idl from '../idl/HeresProgram.json'
+const idl: any = {}
 import { getSolanaConnection, getProgramId } from '@/config/solana'
 import { getCapsulePDA, getCapsuleVaultPDA, getFeeConfigPDA } from './program'
 import { SOLANA_CONFIG, MAGICBLOCK_ER } from '@/constants'

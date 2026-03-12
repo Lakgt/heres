@@ -20,9 +20,9 @@ const NETWORKS = isInjectiveEvmChain()
       { id: 'mainnet', label: 'Injective EVM Mainnet' },
     ] as const
   : [
-      { id: 'devnet', label: 'Solana Devnet' },
-      { id: 'testnet', label: 'Solana Testnet' },
-      { id: 'mainnet', label: 'Solana Mainnet' },
+      { id: 'devnet', label: 'Injective EVM' },
+      { id: 'testnet', label: 'Injective Testnet' },
+      { id: 'mainnet', label: 'Injective Mainnet' },
     ] as const
 
 export function Navbar() {

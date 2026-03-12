@@ -18,10 +18,11 @@ import { getActiveChainLabel, isInjectiveEvmChain } from '@/config/blockchain'
 import { getProgramId, getSolanaConnection } from '@/config/solana'
 import { SOLANA_CONFIG, PLATFORM_FEE, HELIUS_CONFIG, MAGICBLOCK_ER } from '@/constants'
 import { getEnhancedTransactions } from '@/lib/helius'
-import { getCapsule, initFeeConfig } from '@/lib/capsule/client'
+import { initFeeConfig } from '@/lib/capsule/client'
 import { getFeeConfigPDA } from '@/lib/program'
 import { useAppWallet } from '@/components/wallet/AppWalletContext'
 import { INJECTIVE_EVM_CONFIG } from '@/config/injective'
+import { getInjectiveCapsuleCount, listInjectiveCapsules } from '@/lib/injective/client'
 import type { CapsuleRecord } from '@/lib/capsule/types'
 
 type CapsuleEvent = {
@@ -385,7 +386,11 @@ const toInjectiveDashboardRow = (capsule: CapsuleRecord): CapsuleRow => {
   const nowSeconds = Math.floor(Date.now() / 1000)
   const lastActivityMs = capsule.lastActivity ? capsule.lastActivity * 1000 : null
   const executedAtMs = capsule.executedAt ? capsule.executedAt * 1000 : null
-  const isExpired = !capsule.executedAt && capsule.lastActivity + capsule.inactivityPeriod < nowSeconds
+  const isExpired = !capsule.executedAt && (
+    capsule.conditionKind === 'time'
+      ? Boolean(capsule.executeAt && capsule.executeAt <= nowSeconds)
+      : capsule.lastActivity + capsule.inactivityPeriod < nowSeconds
+  )
   const status = capsule.executedAt
     ? 'Executed'
     : capsule.cancelled
@@ -527,36 +532,21 @@ export default function DashboardPage() {
       setIsRefreshing(true)
       try {
         if (isInjectiveDashboard) {
-          const injectiveOwner = typeof ownerRef === 'string' ? ownerRef : null
-          if (!injectiveOwner) {
-            if (isMounted) {
-              setCapsules([])
-              setSummary({
-                total: 0,
-                active: 0,
-                executed: 0,
-                expired: 0,
-                proofs: 0,
-                successRate: 0,
-              })
-              setLastUpdated(Date.now())
-              setError(null)
-            }
-            return
-          }
-
-          const capsule = await getCapsule(injectiveOwner)
-          const capsuleRows = capsule ? [toInjectiveDashboardRow(capsule)] : []
+          const [injectiveCapsules, totalCapsuleCount] = await Promise.all([
+            listInjectiveCapsules({ limit: 100 }),
+            getInjectiveCapsuleCount(),
+          ])
+          const capsuleRows = injectiveCapsules.map((capsule) => toInjectiveDashboardRow(capsule))
           const activeCapsules = capsuleRows.filter((item) => item.status === 'Active').length
           const executedCapsules = capsuleRows.filter((item) => item.status === 'Executed').length
           const expiredCapsules = capsuleRows.filter((item) => item.status === 'Expired').length
           const summaryData = {
-            total: capsuleRows.length,
+            total: totalCapsuleCount,
             active: activeCapsules,
             executed: executedCapsules,
             expired: expiredCapsules,
             proofs: 0,
-            successRate: capsuleRows.length > 0 ? 100 : 0,
+            successRate: totalCapsuleCount > 0 ? Math.round((executedCapsules / totalCapsuleCount) * 100) : 0,
           }
 
           if (isMounted) {
@@ -956,9 +946,14 @@ export default function DashboardPage() {
             </div>
             <p className="mt-3 text-sm text-Heres-muted max-w-xl">
               {isInjectiveDashboard
-                ? 'Track capsule status and execution readiness on Injective EVM.'
+                ? 'Track public capsule status and execution readiness on Injective EVM.'
                 : 'Track capsule status, PER (TEE) execution, and verification on Solana Devnet.'}
             </p>
+            {isInjectiveDashboard && !wallet.connected && (
+              <p className="mt-3 text-sm text-Heres-accent max-w-xl">
+                Public explorer view is live. Connect your wallet only when you need to create, heartbeat, or execute your own capsule.
+              </p>
+            )}
           </section>
 
           {/* ?섏닔猷...ㅼ젙 珥덇린... Fee config媛 ?놁쓣 ?뚮쭔 ?쒖떆 (諛고룷 ...1?뚮쭔 ?꾩슂) */}

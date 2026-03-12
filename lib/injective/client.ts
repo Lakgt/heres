@@ -139,6 +139,19 @@ export function buildInjectiveMetadataHash(intentData: Uint8Array): Hex {
   return keccak256(toHex(intentData))
 }
 
+function parseLocalDateToUnixSeconds(value: string): number | null {
+  const parts = value.split('-').map((part) => Number(part))
+  if (parts.length !== 3 || parts.some((part) => !Number.isInteger(part))) {
+    return null
+  }
+
+  const [year, month, day] = parts
+  const date = new Date(year, month - 1, day, 0, 0, 0, 0)
+  const ms = date.getTime()
+  if (!Number.isFinite(ms)) return null
+  return Math.floor(ms / 1000)
+}
+
 export function deriveInjectiveCreateParams(intentData: Uint8Array): {
   beneficiary: Address
   value: bigint
@@ -173,6 +186,23 @@ export function deriveInjectiveCreateParams(intentData: Uint8Array): {
   }
 
   const now = Math.floor(Date.now() / 1000)
+  const conditionType = parsed.conditionType === 'time' ? 'time' : 'heartbeat'
+  if (conditionType === 'time') {
+    const executeAtSeconds = parsed.targetDate ? parseLocalDateToUnixSeconds(parsed.targetDate) : null
+    if (!executeAtSeconds || executeAtSeconds <= now) {
+      throw new Error('Target date must be in the future for time-based capsules.')
+    }
+
+    return {
+      beneficiary: beneficiary.address as Address,
+      value: parseEther(parsed.totalAmount),
+      conditionKind: 0,
+      executeAt: BigInt(executeAtSeconds),
+      heartbeatWindow: 0n,
+      metadataHash: buildInjectiveMetadataHash(intentData),
+    }
+  }
+
   const inactivityMinutes = Number(parsed.inactivityMinutes || 0)
   const inactivitySeconds = inactivityMinutes > 0
     ? Math.max(inactivityMinutes * 60, 60)
@@ -295,6 +325,67 @@ export async function readInjectiveCapsule(capsuleId: bigint): Promise<CapsuleRe
   } catch {
     return null
   }
+}
+
+export async function getLatestInjectiveCapsule(): Promise<CapsuleRecord | null> {
+  const publicClient = getPublicClient()
+  const latestCreatedId = await publicClient.readContract({
+    address: getContractAddress(),
+    abi: heresCapsuleManagerAbi,
+    functionName: 'nextCapsuleId',
+  })
+
+  if (latestCreatedId <= 1n) return null
+
+  for (let capsuleId = latestCreatedId - 1n; capsuleId >= 1n; capsuleId -= 1n) {
+    const capsule = await readInjectiveCapsule(capsuleId)
+    if (capsule) return capsule
+    if (capsuleId === 1n) break
+  }
+
+  return null
+}
+
+export async function listInjectiveCapsules(options?: {
+  owner?: string | null
+  limit?: number
+}): Promise<CapsuleRecord[]> {
+  const publicClient = getPublicClient()
+  const latestCreatedId = await publicClient.readContract({
+    address: getContractAddress(),
+    abi: heresCapsuleManagerAbi,
+    functionName: 'nextCapsuleId',
+  })
+
+  const highestId = latestCreatedId > 0n ? latestCreatedId - 1n : 0n
+  if (highestId < 1n) return []
+
+  const ownerFilter = options?.owner?.toLowerCase() || null
+  const maxCount = Math.max(1, options?.limit ?? Number(highestId))
+  const capsuleIds: bigint[] = []
+
+  for (let capsuleId = highestId; capsuleId >= 1n && capsuleIds.length < maxCount; capsuleId -= 1n) {
+    capsuleIds.push(capsuleId)
+    if (capsuleId === 1n) break
+  }
+
+  const capsules = await Promise.all(capsuleIds.map((capsuleId) => readInjectiveCapsule(capsuleId)))
+
+  return capsules.filter((capsule): capsule is CapsuleRecord => {
+    if (!capsule) return false
+    if (!ownerFilter) return true
+    return typeof capsule.owner === 'string' && capsule.owner.toLowerCase() === ownerFilter
+  })
+}
+
+export async function getInjectiveCapsuleCount(): Promise<number> {
+  const publicClient = getPublicClient()
+  const nextCapsuleId = await publicClient.readContract({
+    address: getContractAddress(),
+    abi: heresCapsuleManagerAbi,
+    functionName: 'nextCapsuleId',
+  })
+  return Number(nextCapsuleId > 0n ? nextCapsuleId - 1n : 0n)
 }
 
 export async function getInjectiveCapsuleByOwner(ownerRef: string): Promise<CapsuleRecord | null> {

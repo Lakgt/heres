@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PublicKey } from '@solana/web3.js'
 import {
   applyCreDeliveryCallback,
+  verifyCreCallbackAuthorization,
   verifyCreCallbackSignature,
 } from '@/lib/cre/service'
+import { getActiveChain } from '@/config/blockchain'
 
 type CallbackBody = {
   idempotencyKey?: string
@@ -24,7 +25,11 @@ export async function POST(request: NextRequest) {
   }
 
   const signature = request.headers.get('x-cre-signature')
-  if (!verifyCreCallbackSignature(rawBody, signature)) {
+  const auth = request.headers.get('authorization')
+  const hasValidCallbackAuth =
+    verifyCreCallbackSignature(rawBody, signature) ||
+    verifyCreCallbackAuthorization(auth)
+  if (!hasValidCallbackAuth) {
     return NextResponse.json({ error: 'Invalid callback signature' }, { status: 401 })
   }
 
@@ -34,10 +39,17 @@ export async function POST(request: NextRequest) {
   if (!capsuleAddress || !Number.isFinite(executedAt) || (status !== 'delivered' && status !== 'failed')) {
     return NextResponse.json({ error: 'capsuleAddress, executedAt, status are required' }, { status: 400 })
   }
-  try {
-    new PublicKey(capsuleAddress)
-  } catch {
-    return NextResponse.json({ error: 'Invalid capsule address' }, { status: 400 })
+  if (getActiveChain() === 'injective-evm') {
+    if (!/^\d+$/.test(capsuleAddress)) {
+      return NextResponse.json({ error: 'Invalid capsule address' }, { status: 400 })
+    }
+  } else {
+    try {
+      const { PublicKey } = await import('@solana/web3.js')
+      new PublicKey(capsuleAddress)
+    } catch {
+      return NextResponse.json({ error: 'Invalid capsule address' }, { status: 400 })
+    }
   }
 
   const ledger = await applyCreDeliveryCallback({

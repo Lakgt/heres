@@ -87,7 +87,7 @@ function createInjectiveWagmiConfig() {
     transports: {
       [injectiveChain.id]: http(INJECTIVE_EVM_CONFIG.rpcUrl),
     },
-    ssr: true,
+    ssr: false,
   })
 }
 

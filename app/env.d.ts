@@ -18,5 +18,7 @@ declare namespace NodeJS {
     CRON_SECRET?: string
     CRE_DISPATCH_SECRET?: string
     CRE_STORE_PATH?: string
+    CRANK_WALLET_PRIVATE_KEY?: string
+    INJECTIVE_EXECUTOR_PRIVATE_KEY?: string
   }
 }

@@ -647,7 +647,7 @@ export default function HomePage() {
             <div className="flex flex-col items-center justify-center order-2 lg:order-1">
               <div className="relative w-full max-w-xl lg:max-w-2xl rounded-2xl overflow-hidden border border-white/[0.06] shadow-bento">
                 <Image
-                  src="/solana-mobile-hero.png"
+                  src="/injective-mobile-hero.png"
                   alt="Heres - web dashboard and mobile Create Capsule"
                   width={800}
                   height={600}

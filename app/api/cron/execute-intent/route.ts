@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getActiveChain } from '@/config/blockchain'
 import { reconcileCreDeliveries } from '@/lib/cre/service'
+import { executeReadyInjectiveCapsules, reconcileInjectiveCreDeliveries } from '@/lib/injective/executor'
 
 export async function GET(request: NextRequest) {
   return handleCron(request)
@@ -28,13 +30,37 @@ async function handleCron(request: NextRequest) {
     ])
 
   try {
+    if (getActiveChain() === 'injective-evm') {
+      const scanLimit = Number(request.nextUrl.searchParams.get('scan') || '100')
+      const maxExecutions = Number(request.nextUrl.searchParams.get('maxExecutions') || '5')
+      const maxDispatches = Number(request.nextUrl.searchParams.get('maxDispatches') || '10')
+
+      const execution = await timeout(
+        executeReadyInjectiveCapsules({ scanLimit, maxExecutions }),
+        25000,
+        'executeReadyInjectiveCapsules'
+      )
+      const cre = await timeout(
+        reconcileInjectiveCreDeliveries({ scanLimit, maxDispatches }),
+        20000,
+        'reconcileInjectiveCreDeliveries'
+      )
+
+      return NextResponse.json({
+        ok: true,
+        chain: 'injective-evm',
+        execution,
+        cre,
+      })
+    }
+
     const cre = await timeout(reconcileCreDeliveries(), 45000, 'reconcileCre')
     return NextResponse.json({
       ok: true,
-      chain: 'injective-evm',
+      chain: 'solana',
       crank: {
         skipped: true,
-        reason: 'Legacy Solana crank is disabled in Injective mode.',
+        reason: 'Legacy Solana crank route is not managed by the Injective helper.',
       },
       cre,
     })
