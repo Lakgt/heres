@@ -101,17 +101,14 @@ export default function CapsulesEntryPage() {
               <h1 className="text-3xl font-bold text-Heres-white">{title}</h1>
               <p className="mt-2 text-Heres-muted">{subtitle}</p>
             </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <div className="wallet-menu-container flex justify-center">
-                <WalletConnectButton />
-              </div>
+            {wallet.connected && (
               <Link
                 href="/create"
                 className="inline-flex items-center justify-center rounded-xl border border-Heres-accent bg-Heres-accent/10 px-4 py-3 text-sm font-medium text-Heres-accent hover:bg-Heres-accent/20"
               >
                 Create Capsule
               </Link>
-            </div>
+            )}
           </div>
         </section>
 
@@ -128,8 +125,16 @@ export default function CapsulesEntryPage() {
             <p className="mb-6 text-Heres-muted">
               Connect your wallet to view and manage your capsules.
             </p>
-            <div className="wallet-menu-container flex justify-center">
-              <WalletConnectButton />
+            <div className="flex flex-col items-center gap-3">
+              <div className="wallet-menu-container flex justify-center">
+                <WalletConnectButton />
+              </div>
+              <Link
+                href="/create"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-Heres-accent bg-Heres-accent/10 px-6 py-3 text-sm font-semibold text-Heres-accent hover:bg-Heres-accent/20"
+              >
+                Create Capsule
+              </Link>
             </div>
           </div>
         ) : loading ? (
