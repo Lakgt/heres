@@ -200,6 +200,12 @@ export default function CreatePage() {
   useEffect(() => {
     const checkExistingCapsule = async () => {
       if (connected && ownerAddress) {
+        if (isInjectiveEvmChain()) {
+          setModifyCount(0)
+          setExistingCapsule(false)
+          return
+        }
+
         // Load modification count from localStorage
         const countKey = STORAGE_KEYS.CAPSULE_MODIFY_COUNT(ownerAddress)
         const stored = localStorage.getItem(countKey)
@@ -341,13 +347,10 @@ export default function CreatePage() {
       return
     }
 
-    // Check modification limit (3 per wallet)
     const countKey = STORAGE_KEYS.CAPSULE_MODIFY_COUNT(ownerAddress)
-    const currentCount = parseInt(localStorage.getItem(countKey) || '0', 10)
-    if (currentCount >= MAX_CAPSULE_MODIFICATIONS) {
-      alert(`You have reached the maximum number of capsule modifications (${MAX_CAPSULE_MODIFICATIONS}) for this wallet.`)
-      return
-    }
+    const currentCount = isInjectiveEvmChain()
+      ? 0
+      : parseInt(localStorage.getItem(countKey) || '0', 10)
 
     if (capsuleType === 'token' && !validateBeneficiaries()) return
     if (isInjectiveEvmChain()) {
@@ -543,8 +546,8 @@ export default function CreatePage() {
       setTxHash(hash)
       console.log('[Step 1/3] Capsule created. Tx:', hash)
 
-      // Increment modification count
-      if (ownerAddress) {
+      // Increment modification count for legacy Solana flow only
+      if (ownerAddress && !isInjectiveEvmChain()) {
         const newCount = currentCount + 1
         localStorage.setItem(countKey, String(newCount))
         setModifyCount(newCount)
@@ -751,7 +754,7 @@ export default function CreatePage() {
             </div>
           ) : (
             <div className="space-y-6">
-              {connected && modifyCount >= MAX_CAPSULE_MODIFICATIONS && (
+              {connected && !isInjectiveEvmChain() && modifyCount >= MAX_CAPSULE_MODIFICATIONS && (
                 <div className="card-Heres p-6 border-red-500/40 bg-red-500/5">
                   <div className="flex items-start gap-4">
                     <Shield className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" />
@@ -765,7 +768,7 @@ export default function CreatePage() {
                 </div>
               )}
 
-              {connected && modifyCount > 0 && modifyCount < MAX_CAPSULE_MODIFICATIONS && (
+              {connected && !isInjectiveEvmChain() && modifyCount > 0 && modifyCount < MAX_CAPSULE_MODIFICATIONS && (
                 <div className="rounded-lg border border-Heres-border bg-Heres-surface/50 px-4 py-3 text-sm text-Heres-muted">
                   Capsule modifications used: <span className="text-Heres-white font-medium">{modifyCount}</span> / {MAX_CAPSULE_MODIFICATIONS}
                 </div>

@@ -40,6 +40,13 @@ export default function CapsulesEntryPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (injectiveMode && !wallet.connected) {
+      setCapsules([])
+      setLoading(false)
+      setError(null)
+      return
+    }
+
     let cancelled = false
     setLoading(true)
     setError(null)
@@ -49,7 +56,7 @@ export default function CapsulesEntryPage() {
         if (injectiveMode) {
           const records = await listInjectiveCapsules({
             owner: wallet.address ?? null,
-            limit: wallet.address ? 100 : 20,
+            limit: 100,
           })
           if (!cancelled) setCapsules(records)
           return
@@ -75,16 +82,10 @@ export default function CapsulesEntryPage() {
     return () => { cancelled = true }
   }, [injectiveMode, ownerRef, wallet.address])
 
-  const title = injectiveMode
-    ? wallet.connected
-      ? 'My Capsules'
-      : 'Public Capsules'
-    : 'My Capsule'
+  const title = 'My Capsules'
 
   const subtitle = injectiveMode
-    ? wallet.connected
-      ? 'All capsules created by your connected Injective wallet.'
-      : 'Recent capsules discovered on Injective EVM. Connect your wallet to filter to yours.'
+    ? 'All capsules created by your connected Injective wallet.'
     : `Connect your wallet to manage your capsule on ${getActiveChainLabel()}.`
 
   const sortedCapsules = useMemo(() => {
@@ -120,7 +121,18 @@ export default function CapsulesEntryPage() {
           </div>
         )}
 
-        {loading ? (
+        {!wallet.connected ? (
+          <div className="card-Heres p-10 text-center">
+            <Shield className="mx-auto mb-6 h-14 w-14 text-Heres-accent" />
+            <h2 className="mb-3 text-2xl font-bold text-Heres-white">Connect Wallet</h2>
+            <p className="mb-6 text-Heres-muted">
+              Connect your wallet to view and manage your capsules.
+            </p>
+            <div className="wallet-menu-container flex justify-center">
+              <WalletConnectButton />
+            </div>
+          </div>
+        ) : loading ? (
           <div className="card-Heres p-10 text-center">
             <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-Heres-accent border-t-transparent" />
             <p className="text-Heres-muted">Loading capsules from chain...</p>
@@ -133,7 +145,7 @@ export default function CapsulesEntryPage() {
               {injectiveMode
                 ? wallet.connected
                   ? 'No capsules were found for this wallet yet.'
-                  : 'No public capsules were returned from the latest chain scan.'
+                  : 'Connect your wallet to view your capsules.'
                 : 'You do not have a capsule yet.'}
             </p>
             <Link
