@@ -1,5 +1,5 @@
 {
-  "callbackUrl": "https://heres.vercel.app/api/cre/callback",
+  "callbackUrl": "https://heres-dun.vercel.app/api/cre/callback",
   "callbackAuthHeader": "",
   "providerMessagePrefix": "cre-prod",
   "forceFailure": false

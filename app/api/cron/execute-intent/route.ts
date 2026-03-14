@@ -3,6 +3,12 @@ import { getActiveChain } from '@/config/blockchain'
 import { reconcileCreDeliveries } from '@/lib/cre/service'
 import { executeReadyInjectiveCapsules, reconcileInjectiveCreDeliveries } from '@/lib/injective/executor'
 
+function readPositiveIntEnv(name: string, fallback: number): number {
+  const raw = process.env[name]
+  const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
+}
+
 export async function GET(request: NextRequest) {
   return handleCron(request)
 }
@@ -31,9 +37,12 @@ async function handleCron(request: NextRequest) {
 
   try {
     if (getActiveChain() === 'injective-evm') {
-      const scanLimit = Number(request.nextUrl.searchParams.get('scan') || '100')
-      const maxExecutions = Number(request.nextUrl.searchParams.get('maxExecutions') || '5')
-      const maxDispatches = Number(request.nextUrl.searchParams.get('maxDispatches') || '10')
+      const defaultScanLimit = readPositiveIntEnv('INJECTIVE_EXECUTOR_SCAN_LIMIT', 250)
+      const defaultMaxExecutions = readPositiveIntEnv('INJECTIVE_EXECUTOR_MAX_EXECUTIONS', 10)
+      const defaultMaxDispatches = readPositiveIntEnv('INJECTIVE_CRE_MAX_DISPATCHES', 25)
+      const scanLimit = Number(request.nextUrl.searchParams.get('scan') || String(defaultScanLimit))
+      const maxExecutions = Number(request.nextUrl.searchParams.get('maxExecutions') || String(defaultMaxExecutions))
+      const maxDispatches = Number(request.nextUrl.searchParams.get('maxDispatches') || String(defaultMaxDispatches))
 
       const execution = await timeout(
         executeReadyInjectiveCapsules({ scanLimit, maxExecutions }),

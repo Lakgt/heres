@@ -88,6 +88,7 @@ export async function executeReadyInjectiveCapsules(options: ExecuteReadyOptions
   const walletClient = getWalletClient()
   const contractAddress = getContractAddress()
   const capsuleIds = await getRecentCapsuleIds(scanLimit)
+  const orderedCapsuleIds = [...capsuleIds].reverse()
 
   let ready = 0
   let executed = 0
@@ -100,7 +101,8 @@ export async function executeReadyInjectiveCapsules(options: ExecuteReadyOptions
     cre?: Awaited<ReturnType<typeof dispatchCreDeliveryForCapsule>>
   }> = []
 
-  for (const capsuleId of capsuleIds) {
+  // Execute oldest ready capsules first so earlier users are not starved by newer ones.
+  for (const capsuleId of orderedCapsuleIds) {
     if (executed >= maxExecutions) break
 
     let canExecute = false
@@ -210,6 +212,7 @@ export async function reconcileInjectiveCreDeliveries(options: ReconcileCreOptio
   const publicClient = getPublicClient()
   const contractAddress = getContractAddress()
   const capsuleIds = await getRecentCapsuleIds(scanLimit)
+  const orderedCapsuleIds = [...capsuleIds].reverse()
 
   let executedCapsules = 0
   let dispatched = 0
@@ -220,7 +223,7 @@ export async function reconcileInjectiveCreDeliveries(options: ReconcileCreOptio
     detail?: string
   }> = []
 
-  for (const capsuleId of capsuleIds) {
+  for (const capsuleId of orderedCapsuleIds) {
     if (dispatched >= maxDispatches) break
 
     try {

@@ -27,6 +27,15 @@ export interface CreDeliveryLedgerRecord {
   updatedAt: number
 }
 
+export interface InjectiveIntentRecord {
+  capsuleAddress: string
+  owner: string
+  metadataHash: string
+  intentDataBase64: string
+  createdAt: number
+  updatedAt: number
+}
+
 export interface DispatchCreDeliveryResult {
   ok: boolean
   skipped?: boolean

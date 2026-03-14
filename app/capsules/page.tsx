@@ -7,7 +7,7 @@ import { useAppWallet } from '@/components/wallet/AppWalletContext'
 import { WalletConnectButton } from '@/components/wallet/WalletConnectButton'
 import { getActiveChainLabel, isInjectiveEvmChain } from '@/config/blockchain'
 import { getCapsule } from '@/lib/capsule/client'
-import { listInjectiveCapsules } from '@/lib/injective/client'
+import { getInjectiveCapsuleCount, listInjectiveCapsules } from '@/lib/injective/client'
 import type { CapsuleRecord } from '@/lib/capsule/types'
 
 function maskAddress(value: string) {
@@ -54,9 +54,10 @@ export default function CapsulesEntryPage() {
     const load = async () => {
       try {
         if (injectiveMode) {
+          const totalCapsuleCount = await getInjectiveCapsuleCount()
           const records = await listInjectiveCapsules({
             owner: wallet.address ?? null,
-            limit: 100,
+            limit: Math.max(totalCapsuleCount, 1),
           })
           if (!cancelled) setCapsules(records)
           return

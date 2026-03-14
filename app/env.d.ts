@@ -20,5 +20,8 @@ declare namespace NodeJS {
     CRE_STORE_PATH?: string
     CRANK_WALLET_PRIVATE_KEY?: string
     INJECTIVE_EXECUTOR_PRIVATE_KEY?: string
+    INJECTIVE_EXECUTOR_SCAN_LIMIT?: string
+    INJECTIVE_EXECUTOR_MAX_EXECUTIONS?: string
+    INJECTIVE_CRE_MAX_DISPATCHES?: string
   }
 }

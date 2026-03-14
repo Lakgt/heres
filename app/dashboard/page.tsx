@@ -532,21 +532,23 @@ export default function DashboardPage() {
       setIsRefreshing(true)
       try {
         if (isInjectiveDashboard) {
-          const [injectiveCapsules, totalCapsuleCount] = await Promise.all([
-            listInjectiveCapsules({ limit: 100 }),
-            getInjectiveCapsuleCount(),
-          ])
+          const totalCapsuleCount = await getInjectiveCapsuleCount()
+          const ownerFilter = wallet.connected ? wallet.address ?? null : null
+          const injectiveCapsules = await listInjectiveCapsules({
+            owner: ownerFilter,
+            limit: wallet.connected ? Math.max(totalCapsuleCount, 1) : Math.min(totalCapsuleCount || 100, 100),
+          })
           const capsuleRows = injectiveCapsules.map((capsule) => toInjectiveDashboardRow(capsule))
           const activeCapsules = capsuleRows.filter((item) => item.status === 'Active').length
           const executedCapsules = capsuleRows.filter((item) => item.status === 'Executed').length
           const expiredCapsules = capsuleRows.filter((item) => item.status === 'Expired').length
           const summaryData = {
-            total: totalCapsuleCount,
+            total: wallet.connected ? capsuleRows.length : totalCapsuleCount,
             active: activeCapsules,
             executed: executedCapsules,
             expired: expiredCapsules,
             proofs: 0,
-            successRate: totalCapsuleCount > 0 ? Math.round((executedCapsules / totalCapsuleCount) * 100) : 0,
+            successRate: capsuleRows.length > 0 ? Math.round((executedCapsules / capsuleRows.length) * 100) : 0,
           }
 
           if (isMounted) {
@@ -850,7 +852,7 @@ export default function DashboardPage() {
     return () => {
       isMounted = false
     }
-  }, [isInjectiveDashboard, ownerRef, refreshKey])
+  }, [isInjectiveDashboard, ownerRef, refreshKey, wallet.address, wallet.connected])
 
   const filteredCapsules = useMemo(() => {
     const value = query.trim().toLowerCase()
@@ -946,7 +948,9 @@ export default function DashboardPage() {
             </div>
             <p className="mt-3 text-sm text-Heres-muted max-w-xl">
               {isInjectiveDashboard
-                ? 'Track public capsule status and execution readiness on Injective EVM.'
+                ? wallet.connected
+                  ? 'Track your capsules, execution readiness, and on-chain delivery state on Injective EVM.'
+                  : 'Track public capsule status and execution readiness on Injective EVM.'
                 : 'Track capsule status, PER (TEE) execution, and verification on Solana Devnet.'}
             </p>
             {isInjectiveDashboard && !wallet.connected && (

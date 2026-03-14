@@ -64,9 +64,9 @@ export type CapsuleClient = {
     token?: string
   ) => Promise<string>
   initFeeConfig: (wallet: unknown, feeRecipient: unknown, creationFeeLamports?: number, executionFeeBps?: number) => Promise<string>
-  updateActivity: (wallet: unknown) => Promise<string>
+  updateActivity: (wallet: unknown, owner?: CapsuleOwnerRef) => Promise<string>
   restartTimer: (wallet: unknown, owner: CapsuleOwnerRef) => Promise<string>
-  cancelCapsule: (wallet: unknown) => Promise<string>
-  deactivateCapsule: (wallet: unknown) => Promise<string>
+  cancelCapsule: (wallet: unknown, owner?: CapsuleOwnerRef) => Promise<string>
+  deactivateCapsule: (wallet: unknown, owner?: CapsuleOwnerRef) => Promise<string>
   getCapsuleRouteAddress: (owner: CapsuleOwnerRef) => string
 }

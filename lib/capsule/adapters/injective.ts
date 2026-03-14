@@ -43,23 +43,25 @@ export const injectiveCapsuleClient: CapsuleClient = {
   delegateCapsule: notImplemented as CapsuleClient['delegateCapsule'],
   scheduleExecuteIntent: notImplemented as CapsuleClient['scheduleExecuteIntent'],
   initFeeConfig: notImplemented as CapsuleClient['initFeeConfig'],
-  async updateActivity(wallet) {
+  async updateActivity(wallet, owner) {
     const evmWallet = wallet as { address?: string | null; evmWalletClient?: any }
     if (!evmWallet.address || !evmWallet.evmWalletClient) {
       throw new Error('Injective wallet client is not connected.')
     }
-    return heartbeatInjectiveCapsule(evmWallet.evmWalletClient, evmWallet.address)
+    return heartbeatInjectiveCapsule(evmWallet.evmWalletClient, typeof owner === 'string' ? owner : evmWallet.address)
   },
-  restartTimer: notImplemented as CapsuleClient['restartTimer'],
-  async cancelCapsule(wallet) {
+  async restartTimer(wallet, owner) {
+    return injectiveCapsuleClient.updateActivity(wallet, owner)
+  },
+  async cancelCapsule(wallet, owner) {
     const evmWallet = wallet as { address?: string | null; evmWalletClient?: any }
     if (!evmWallet.address || !evmWallet.evmWalletClient) {
       throw new Error('Injective wallet client is not connected.')
     }
-    return cancelInjectiveCapsule(evmWallet.evmWalletClient, evmWallet.address)
+    return cancelInjectiveCapsule(evmWallet.evmWalletClient, typeof owner === 'string' ? owner : evmWallet.address)
   },
-  async deactivateCapsule(wallet) {
-    return injectiveCapsuleClient.cancelCapsule(wallet)
+  async deactivateCapsule(wallet, owner) {
+    return injectiveCapsuleClient.cancelCapsule(wallet, owner)
   },
   getCapsuleRouteAddress(owner) {
     return String(owner)

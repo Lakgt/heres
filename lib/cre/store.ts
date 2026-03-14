@@ -1,7 +1,7 @@
 import 'server-only'
 
 import { Redis } from '@upstash/redis'
-import { CreDeliveryLedgerRecord, CreSecretRecord } from '@/lib/cre/types'
+import { CreDeliveryLedgerRecord, CreSecretRecord, InjectiveIntentRecord } from '@/lib/cre/types'
 
 // Redis keys
 const SECRET_PREFIX = 'cre:secret:'       // cre:secret:{secretRef} → CreSecretRecord
@@ -9,6 +9,8 @@ const SECRET_INDEX = 'cre:secret-refs'    // SET of all secretRefs
 const DELIVERY_PREFIX = 'cre:delivery:'   // cre:delivery:{idempotencyKey} → CreDeliveryLedgerRecord
 const DELIVERY_INDEX = 'cre:delivery-keys' // SET of all idempotencyKeys
 const DELIVERY_BY_CAPSULE = 'cre:delivery-by-capsule:' // cre:delivery-by-capsule:{addr} → SET of idempotencyKeys
+const INJECTIVE_INTENT_PREFIX = 'cre:injective-intent:'
+const INJECTIVE_INTENT_HASH_PREFIX = 'cre:injective-intent-by-hash:'
 
 // ---------------------------------------------------------------------------
 // Redis client
@@ -31,16 +33,22 @@ function getLocalPath(): string {
 type LocalState = {
   secrets: CreSecretRecord[]
   deliveries: CreDeliveryLedgerRecord[]
+  injectiveIntents: InjectiveIntentRecord[]
 }
 
 function loadLocal(): LocalState {
   try {
     const fs = require('fs')
     const p = getLocalPath()
-    if (!fs.existsSync(p)) return { secrets: [], deliveries: [] }
-    return JSON.parse(fs.readFileSync(p, 'utf8')) as LocalState
+    if (!fs.existsSync(p)) return { secrets: [], deliveries: [], injectiveIntents: [] }
+    const parsed = JSON.parse(fs.readFileSync(p, 'utf8')) as Partial<LocalState>
+    return {
+      secrets: parsed.secrets ?? [],
+      deliveries: parsed.deliveries ?? [],
+      injectiveIntents: parsed.injectiveIntents ?? [],
+    }
   } catch {
-    return { secrets: [], deliveries: [] }
+    return { secrets: [], deliveries: [], injectiveIntents: [] }
   }
 }
 
@@ -102,6 +110,49 @@ export async function listCreSecrets(): Promise<CreSecretRecord[]> {
   return results
     .filter((r): r is string | CreSecretRecord => r != null)
     .map(r => typeof r === 'string' ? JSON.parse(r) as CreSecretRecord : r as CreSecretRecord)
+}
+
+export async function upsertInjectiveIntentRecord(record: InjectiveIntentRecord): Promise<InjectiveIntentRecord> {
+  const redis = getRedis()
+  if (!redis) {
+    const state = loadLocal()
+    const idx = state.injectiveIntents.findIndex((item) => item.capsuleAddress === record.capsuleAddress)
+    if (idx >= 0) state.injectiveIntents[idx] = record
+    else state.injectiveIntents.push(record)
+    saveLocal(state)
+    return record
+  }
+
+  await redis.set(`${INJECTIVE_INTENT_PREFIX}${record.capsuleAddress}`, JSON.stringify(record))
+  await redis.set(`${INJECTIVE_INTENT_HASH_PREFIX}${record.metadataHash.toLowerCase()}`, record.capsuleAddress)
+  return record
+}
+
+export async function getInjectiveIntentRecord(capsuleAddress: string): Promise<InjectiveIntentRecord | null> {
+  const redis = getRedis()
+  if (!redis) {
+    const state = loadLocal()
+    return state.injectiveIntents.find((item) => item.capsuleAddress === capsuleAddress) ?? null
+  }
+
+  const raw = await redis.get<string>(`${INJECTIVE_INTENT_PREFIX}${capsuleAddress}`)
+  if (!raw) return null
+  return typeof raw === 'string'
+    ? JSON.parse(raw) as InjectiveIntentRecord
+    : raw as unknown as InjectiveIntentRecord
+}
+
+export async function getInjectiveIntentRecordByMetadataHash(metadataHash: string): Promise<InjectiveIntentRecord | null> {
+  const normalizedHash = metadataHash.toLowerCase()
+  const redis = getRedis()
+  if (!redis) {
+    const state = loadLocal()
+    return state.injectiveIntents.find((item) => item.metadataHash.toLowerCase() === normalizedHash) ?? null
+  }
+
+  const capsuleAddress = await redis.get<string>(`${INJECTIVE_INTENT_HASH_PREFIX}${normalizedHash}`)
+  if (!capsuleAddress) return null
+  return getInjectiveIntentRecord(String(capsuleAddress))
 }
 
 // ---------------------------------------------------------------------------

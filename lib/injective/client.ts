@@ -56,6 +56,25 @@ function persistLatestCapsuleId(owner: Address, capsuleId: bigint, intentData?: 
   }
 }
 
+async function persistInjectiveIntentServerSide(capsuleId: bigint, owner: Address, intentData: Uint8Array): Promise<void> {
+  if (typeof window === 'undefined' || typeof fetch !== 'function') return
+
+  const response = await fetch('/api/injective/capsule-intent', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      capsuleId: capsuleId.toString(),
+      owner,
+      intentDataBase64: bytesToBase64(intentData),
+    }),
+  })
+
+  if (!response.ok) {
+    const message = await response.text()
+    throw new Error(message || 'Failed to persist Injective intent payload')
+  }
+}
+
 function readPersistedLatestCapsuleId(owner: Address): bigint | null {
   if (typeof window === 'undefined') return null
   const raw = localStorage.getItem(STORAGE_KEYS.latestCapsule(owner))
@@ -244,6 +263,9 @@ export async function createInjectiveCapsule(walletClient: WalletClient, owner: 
   const capsuleId = extractCapsuleIdFromReceipt(receipt.logs)
   if (capsuleId != null) {
     persistLatestCapsuleId(owner, capsuleId, intentData)
+    void persistInjectiveIntentServerSide(capsuleId, owner, intentData).catch((error) => {
+      console.warn('[Injective intent registry] Failed to persist intent payload:', error)
+    })
   }
 
   return hash

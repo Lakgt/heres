@@ -261,7 +261,7 @@ export default function CapsuleDetailPage() {
     setActionLoading('heartbeat')
     setActionResult(null)
     try {
-      const tx = await updateActivity(wallet as any)
+      const tx = await updateActivity(wallet as any, capsule.id ?? capsule.owner)
       await refreshCapsule()
       setActionResult({ type: 'success', message: `Heartbeat TX: ${tx}` })
     } catch (err: any) {

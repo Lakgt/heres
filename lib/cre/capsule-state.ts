@@ -2,6 +2,7 @@ import 'server-only'
 
 import { getActiveChain } from '@/config/blockchain'
 import { INJECTIVE_EVM_CONFIG } from '@/config/injective'
+import { getInjectiveIntentRecord } from '@/lib/cre/store'
 import { fetchCapsuleStateByAddress, fetchCapsuleStateByOwner } from '@/lib/cre/solana'
 
 export type CreCapsuleState = {
@@ -15,6 +16,10 @@ export type CreCapsuleState = {
   accountOwnerAddress: string
 }
 
+function decodeBase64(value: string): Uint8Array {
+  return Uint8Array.from(Buffer.from(value, 'base64'))
+}
+
 export async function fetchCreCapsuleStateByAddress(capsuleAddress: string): Promise<CreCapsuleState | null> {
   switch (getActiveChain()) {
     case 'injective-evm': {
@@ -24,13 +29,16 @@ export async function fetchCreCapsuleStateByAddress(capsuleAddress: string): Pro
         : await getInjectiveCapsuleByOwner(capsuleAddress)
 
       if (!capsule) return null
+      const fallbackIntent = capsule.intentData.length === 0
+        ? await getInjectiveIntentRecord(String(capsule.capsuleAddress || capsule.id || capsuleAddress))
+        : null
 
       return {
         capsuleAddress: capsule.capsuleAddress || capsule.id || capsuleAddress,
         ownerAddress: String(capsule.owner),
         inactivityPeriod: capsule.inactivityPeriod,
         lastActivity: capsule.lastActivity,
-        intentData: capsule.intentData,
+        intentData: fallbackIntent ? decodeBase64(fallbackIntent.intentDataBase64) : capsule.intentData,
         isActive: capsule.isActive,
         executedAt: capsule.executedAt,
         accountOwnerAddress: INJECTIVE_EVM_CONFIG.capsuleManagerAddress || '',
@@ -67,13 +75,16 @@ export async function fetchCreCapsuleStateByOwner(ownerAddress: string): Promise
       const { getInjectiveCapsuleByOwner } = await import('@/lib/injective/client')
       const capsule = await getInjectiveCapsuleByOwner(ownerAddress)
       if (!capsule) return null
+      const fallbackIntent = capsule.intentData.length === 0
+        ? await getInjectiveIntentRecord(String(capsule.capsuleAddress || capsule.id || ownerAddress))
+        : null
 
       return {
         capsuleAddress: capsule.capsuleAddress || capsule.id || ownerAddress,
         ownerAddress: String(capsule.owner),
         inactivityPeriod: capsule.inactivityPeriod,
         lastActivity: capsule.lastActivity,
-        intentData: capsule.intentData,
+        intentData: fallbackIntent ? decodeBase64(fallbackIntent.intentDataBase64) : capsule.intentData,
         isActive: capsule.isActive,
         executedAt: capsule.executedAt,
         accountOwnerAddress: INJECTIVE_EVM_CONFIG.capsuleManagerAddress || '',
