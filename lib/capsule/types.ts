@@ -13,6 +13,7 @@ export type CapsuleBeneficiary = {
 
 export type CapsuleRecord = {
   owner: any
+  createdAt?: number
   inactivityPeriod: number
   lastActivity: number
   intentData: Uint8Array

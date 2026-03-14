@@ -50,6 +50,52 @@ function formatChartTime(ts: number, rangeKey: string): string {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit' })
 }
 
+function buildInjectiveTimelineChartData(
+  capsule: NonNullable<Awaited<ReturnType<typeof getCapsuleByAddress>>>,
+  rangeKey: (typeof CHART_RANGES)[number]['key'],
+  hoursFilter: number | null
+) {
+  const now = Date.now()
+  const points: Array<{ ts: number; value: number; usd: number; label: string }> = []
+  const createdAtMs = capsule.createdAt ? capsule.createdAt * 1000 : null
+  const lastActivityMs = capsule.lastActivity ? capsule.lastActivity * 1000 : null
+  const executeAtMs = capsule.executeAt ? capsule.executeAt * 1000 : null
+  const executedAtMs = capsule.executedAt ? capsule.executedAt * 1000 : null
+
+  if (createdAtMs) points.push({ ts: createdAtMs, value: 1, usd: 1, label: 'Created' })
+  if (lastActivityMs && (!createdAtMs || lastActivityMs !== createdAtMs)) {
+    points.push({ ts: lastActivityMs, value: 2, usd: 2, label: 'Heartbeat' })
+  }
+  if (executeAtMs) {
+    points.push({ ts: executeAtMs, value: executedAtMs ? 3 : 2.5, usd: executedAtMs ? 3 : 2.5, label: executedAtMs ? 'Ready' : 'Deadline' })
+  }
+  if (executedAtMs) {
+    points.push({ ts: executedAtMs, value: 4, usd: 4, label: 'Executed' })
+  } else if (executeAtMs && executeAtMs <= now) {
+    points.push({ ts: now, value: 3, usd: 3, label: 'Ready' })
+  } else {
+    points.push({ ts: now, value: 1.5, usd: 1.5, label: 'Current' })
+  }
+
+  const cutoff = hoursFilter != null
+    ? now - hoursFilter * 60 * 60 * 1000
+    : rangeKey === '1mo'
+      ? now - 30 * 24 * 60 * 60 * 1000
+      : rangeKey === '1y'
+        ? now - 365 * 24 * 60 * 60 * 1000
+        : now - 24 * 60 * 60 * 1000
+
+  return points
+    .filter((point) => point.ts >= cutoff)
+    .sort((a, b) => a.ts - b.ts)
+    .map((point) => ({
+      time: formatChartTime(point.ts, rangeKey),
+      value: point.value,
+      usd: point.usd,
+      label: point.label,
+    }))
+}
+
 type IntentParsed =
   | {
     type: 'token'
@@ -474,7 +520,11 @@ export default function CapsuleDetailPage() {
   const rangeConfig = useMemo(() => CHART_RANGES.find((r) => r.key === chartRange) ?? CHART_RANGES[2], [chartRange])
   useEffect(() => {
     if (isInjectiveCapsule) {
-      setChartData([])
+      if (capsule) {
+        setChartData(buildInjectiveTimelineChartData(capsule, rangeConfig.key, rangeConfig.hoursFilter))
+      } else {
+        setChartData([])
+      }
       setChartLoading(false)
       return
     }
@@ -501,7 +551,7 @@ export default function CapsuleDetailPage() {
       })
       .catch(() => setChartData([]))
       .finally(() => setChartLoading(false))
-  }, [isInjectiveCapsule, isToken, isNft, chartRange, rangeConfig.days, rangeConfig.hoursFilter, rangeConfig.key])
+  }, [capsule, isInjectiveCapsule, isToken, isNft, chartRange, rangeConfig.days, rangeConfig.hoursFilter, rangeConfig.key])
 
   // Current SOL price (live) and polling
   useEffect(() => {
@@ -1066,11 +1116,20 @@ export default function CapsuleDetailPage() {
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                     <XAxis dataKey="time" tick={{ fontSize: 10 }} stroke="rgba(255,255,255,0.3)" />
-                    <YAxis domain={[90, 'auto']} tick={{ fontSize: 10 }} stroke="rgba(255,255,255,0.3)" tickFormatter={(v) => `$${v}`} />
+                    <YAxis
+                      domain={isInjectiveCapsule ? [0, 5] : [90, 'auto']}
+                      tick={{ fontSize: 10 }}
+                      stroke="rgba(255,255,255,0.3)"
+                      tickFormatter={(v) => isInjectiveCapsule ? String(v) : `$${v}`}
+                    />
                     <Tooltip
                       contentStyle={{ backgroundColor: 'var(--Heres-card)', border: '1px solid var(--Heres-border)' }}
                       labelStyle={{ color: 'var(--Heres-white)' }}
-                      formatter={(value: number | undefined) => [value != null ? `$${Number(value).toFixed(2)}` : '$0.00', 'USD']}
+                      formatter={(value: number | undefined, _name, payload: any) => (
+                        isInjectiveCapsule
+                          ? [payload?.payload?.label ?? 'Event', 'Lifecycle']
+                          : [value != null ? `$${Number(value).toFixed(2)}` : '$0.00', 'USD']
+                      )}
                     />
                     <Area
                       type="monotone"

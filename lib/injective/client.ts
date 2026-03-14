@@ -137,6 +137,7 @@ function toCapsuleRecord(record: InjectiveCapsuleRecord): CapsuleRecord {
   const status = computeInjectiveCapsuleStatus(record)
   return {
     owner: record.owner,
+    createdAt: record.createdAt,
     inactivityPeriod: record.condition === 'heartbeat'
       ? record.heartbeatWindowSeconds
       : Math.max(record.executeAt - record.createdAt, 0),
@@ -415,6 +416,12 @@ export async function getInjectiveCapsuleByOwner(ownerRef: string): Promise<Caps
   const capsuleId = await findLatestInjectiveCapsuleId(owner)
   if (capsuleId == null) return null
   return readInjectiveCapsule(capsuleId)
+}
+
+export async function getLatestInjectiveCapsuleIdForOwner(ownerRef: string): Promise<string | null> {
+  const owner = toAddress(ownerRef)
+  const capsuleId = await findLatestInjectiveCapsuleId(owner)
+  return capsuleId != null ? capsuleId.toString() : null
 }
 
 export async function executeInjectiveCapsule(walletClient: WalletClient, owner: Address | string): Promise<string> {

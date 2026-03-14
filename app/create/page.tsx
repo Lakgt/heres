@@ -15,6 +15,7 @@ import { getNftsByOwner } from '@/lib/helius'
 import { encodeIntentData, daysToSeconds } from '@/utils/intent'
 import { buildCreSignedMessage } from '@/utils/creAuth'
 import { bytesToBase64, encryptPrivateMessage, sha256Hex } from '@/utils/creCrypto'
+import { getLatestInjectiveCapsuleIdForOwner } from '@/lib/injective/client'
 import {
   isValidBeneficiaryAddress,
   validateBeneficiaryAddresses,
@@ -599,8 +600,12 @@ export default function CreatePage() {
 
       setCurrentStep(null)
 
-      // Redirect to capsules page after successful creation
-      window.location.href = isInjectiveEvmChain() ? '/dashboard' : '/capsules'
+      if (isInjectiveEvmChain() && ownerAddress) {
+        const latestCapsuleId = await getLatestInjectiveCapsuleIdForOwner(ownerAddress)
+        window.location.href = latestCapsuleId ? `/capsules/${latestCapsuleId}` : '/capsules'
+      } else {
+        window.location.href = '/capsules'
+      }
     } catch (err: any) {
       console.error('Error creating capsule:', err)
       let errorMessage = err.message || 'Failed to create capsule'
@@ -617,7 +622,12 @@ export default function CreatePage() {
             const createdCapsule = await getCapsule((publicKey ?? ownerAddress) as any)
             if (createdCapsule && createdCapsule.isActive) {
               alert('Capsule created successfully!')
-              window.location.href = isInjectiveEvmChain() ? '/dashboard' : '/capsules'
+              if (isInjectiveEvmChain() && ownerAddress) {
+                const latestCapsuleId = await getLatestInjectiveCapsuleIdForOwner(ownerAddress)
+                window.location.href = latestCapsuleId ? `/capsules/${latestCapsuleId}` : '/capsules'
+              } else {
+                window.location.href = '/capsules'
+              }
               setIsPending(false)
               return
             }
