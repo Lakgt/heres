@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import { gsap } from 'gsap'
 import {
@@ -54,16 +54,47 @@ export function HeresPromoReel({ className = '' }: { className?: string }) {
   const ctaRef = useRef<HTMLDivElement>(null)
   const injectiveLogoRef = useRef<HTMLDivElement>(null)
   const fadeRef = useRef<HTMLDivElement>(null)
+  const timelineRef = useRef<gsap.core.Timeline | null>(null)
+  const gridTweenRef = useRef<gsap.core.Tween | null>(null)
+  const [isVisible, setIsVisible] = useState(true)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const mobileQuery = window.matchMedia('(max-width: 768px)')
+    const syncMobile = () => setIsMobile(mobileQuery.matches)
+
+    syncMobile()
+    mobileQuery.addEventListener('change', syncMobile)
+    return () => mobileQuery.removeEventListener('change', syncMobile)
+  }, [])
+
+  useEffect(() => {
+    const node = containerRef.current
+    if (!node || typeof IntersectionObserver === 'undefined') return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsVisible(entry.isIntersecting),
+      { rootMargin: '160px 0px', threshold: 0.05 }
+    )
+
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
 
   useEffect(() => {
     const ctx = gsap.context(() => {
       const tl = gsap.timeline({ repeat: -1, repeatDelay: 0 })
-      tl.timeScale(1)
+      tl.timeScale(isMobile ? 0.92 : 1)
+      timelineRef.current = tl
 
-      const gridDegPerSec = PROMO_STYLE.GRID_ROTATION_SPEED_DEG_PER_SEC
+      const gridDegPerSec = isMobile
+        ? PROMO_STYLE.GRID_ROTATION_SPEED_DEG_PER_SEC * 0.72
+        : PROMO_STYLE.GRID_ROTATION_SPEED_DEG_PER_SEC
       const gridDuration = 360 / gridDegPerSec
       if (gridRef.current) {
-        gsap.to(gridRef.current, {
+        gridTweenRef.current = gsap.to(gridRef.current, {
           rotation: 360,
           duration: gridDuration,
           repeat: -1,
@@ -222,8 +253,23 @@ export function HeresPromoReel({ className = '' }: { className?: string }) {
       tl.to(fadeRef.current, { opacity: 1, duration: PROMO_SCENE5.GLOBAL_FADE_OUT.DURATION_S }, SEG5 - 0.5)
       tl.to(fadeRef.current, { opacity: 0, duration: 0.1 }, SEG5)
     }, containerRef)
-    return () => ctx.revert()
-  }, [])
+    return () => {
+      timelineRef.current = null
+      gridTweenRef.current = null
+      ctx.revert()
+    }
+  }, [isMobile])
+
+  useEffect(() => {
+    if (isVisible) {
+      timelineRef.current?.play()
+      gridTweenRef.current?.play()
+      return
+    }
+
+    timelineRef.current?.pause()
+    gridTweenRef.current?.pause()
+  }, [isVisible])
 
   return (
     <div
@@ -242,6 +288,7 @@ export function HeresPromoReel({ className = '' }: { className?: string }) {
           transform: 'perspective(800px) rotateX(18deg)',
           transformOrigin: 'center center',
           opacity: PROMO_STYLE.GRID_OPACITY,
+          willChange: 'transform',
         }}
       />
 

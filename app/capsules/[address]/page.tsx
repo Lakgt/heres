@@ -56,18 +56,24 @@ function buildInjectiveTimelineChartData(
   hoursFilter: number | null
 ) {
   const now = Date.now()
-  const points: Array<{ ts: number; value: number; usd: number; label: string }> = []
   const createdAtMs = capsule.createdAt ? capsule.createdAt * 1000 : null
   const lastActivityMs = capsule.lastActivity ? capsule.lastActivity * 1000 : null
   const executeAtMs = capsule.executeAt ? capsule.executeAt * 1000 : null
   const executedAtMs = capsule.executedAt ? capsule.executedAt * 1000 : null
+
+  const points: Array<{ ts: number; value: number; usd: number; label: string }> = []
 
   if (createdAtMs) points.push({ ts: createdAtMs, value: 1, usd: 1, label: 'Created' })
   if (lastActivityMs && (!createdAtMs || lastActivityMs !== createdAtMs)) {
     points.push({ ts: lastActivityMs, value: 2, usd: 2, label: 'Heartbeat' })
   }
   if (executeAtMs) {
-    points.push({ ts: executeAtMs, value: executedAtMs ? 3 : 2.5, usd: executedAtMs ? 3 : 2.5, label: executedAtMs ? 'Ready' : 'Deadline' })
+    points.push({
+      ts: executeAtMs,
+      value: executedAtMs ? 3 : 2.5,
+      usd: executedAtMs ? 3 : 2.5,
+      label: executedAtMs ? 'Ready' : 'Deadline',
+    })
   }
   if (executedAtMs) {
     points.push({ ts: executedAtMs, value: 4, usd: 4, label: 'Executed' })

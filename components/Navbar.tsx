@@ -132,7 +132,9 @@ export function Navbar() {
           className="border-t border-white/20 bg-[#0f172a] md:hidden overflow-x-hidden"
           style={{
             backgroundColor: '#0f172a',
-            minHeight: 'calc(100dvh - 4rem - env(safe-area-inset-top, 0px) - 25rem)',
+            maxHeight: 'calc(100svh - 4rem)',
+            overflowY: 'auto',
+            overscrollBehavior: 'contain',
           }}
         >
           <nav className="mx-auto max-w-7xl px-4 py-2 sm:px-6 min-w-0 overflow-hidden">

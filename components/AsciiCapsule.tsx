@@ -34,38 +34,84 @@ function getInitialGrid(): string[] {
 
 export function AsciiCapsule({ className = '', bgColor = 'var(--Heres-bg)' }: { className?: string, bgColor?: string }) {
   const [grid, setGrid] = useState<string[]>(getInitialGrid)
-  const rafRef = useRef<number>(0)
-  const lastTick = useRef(0)
+  const wrapperRef = useRef<HTMLDivElement>(null)
   const revealRef = useRef(false)
-  const interval = 80
+  const revealTimeoutRef = useRef<number | null>(null)
+  const [isVisible, setIsVisible] = useState(true)
+  const [isMobile, setIsMobile] = useState(false)
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
 
-  // Random char animation (skip phrase cells when revealing)
   useEffect(() => {
-    const tick = (now: number) => {
-      if (now - lastTick.current >= interval) {
-        lastTick.current = now
-        setGrid((prev) => {
-          const next = [...prev]
-          const toUpdate = Math.floor(COLS * ROWS * 0.12) || 1
-          let updated = 0
-          while (updated < toUpdate) {
-            const idx = Math.floor(Math.random() * (COLS * ROWS))
-            if (revealRef.current && PHRASE_INDEX_SET.has(idx)) continue
-            next[idx] = getRandomChar()
-            updated++
-          }
-          return next
-        })
-      }
-      rafRef.current = requestAnimationFrame(tick)
+    if (typeof window === 'undefined') return
+
+    const mobileQuery = window.matchMedia('(max-width: 768px)')
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+
+    const syncQueries = () => {
+      setIsMobile(mobileQuery.matches)
+      setPrefersReducedMotion(motionQuery.matches)
     }
-    rafRef.current = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(rafRef.current)
+
+    syncQueries()
+    mobileQuery.addEventListener('change', syncQueries)
+    motionQuery.addEventListener('change', syncQueries)
+
+    return () => {
+      mobileQuery.removeEventListener('change', syncQueries)
+      motionQuery.removeEventListener('change', syncQueries)
+    }
   }, [])
 
-  // Periodically reveal "INJECTIVE EVM" for ~1.8s, then back to chaos
   useEffect(() => {
+    const node = wrapperRef.current
+    if (!node || typeof IntersectionObserver === 'undefined') return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsVisible(entry.isIntersecting),
+      { rootMargin: '120px 0px', threshold: 0.05 }
+    )
+
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (!isVisible) return
+
+    const tickInterval = prefersReducedMotion ? 180 : isMobile ? 140 : 95
+    const updateRatio = prefersReducedMotion ? 0.04 : isMobile ? 0.07 : 0.11
+
+    const tick = () => {
+      setGrid((prev) => {
+        const next = [...prev]
+        const toUpdate = Math.floor(COLS * ROWS * updateRatio) || 1
+        let updated = 0
+
+        while (updated < toUpdate) {
+          const idx = Math.floor(Math.random() * (COLS * ROWS))
+          if (revealRef.current && PHRASE_INDEX_SET.has(idx)) continue
+          next[idx] = getRandomChar()
+          updated++
+        }
+
+        return next
+      })
+    }
+
+    const timer = window.setInterval(tick, tickInterval)
+    return () => window.clearInterval(timer)
+  }, [isMobile, isVisible, prefersReducedMotion])
+
+  useEffect(() => {
+    if (!isVisible) return
+
+    const revealDuration = prefersReducedMotion ? 2200 : isMobile ? 2000 : 1800
+    const revealCadence = prefersReducedMotion ? 6500 : isMobile ? 5600 : 4500
+
     const reveal = () => {
+      if (revealTimeoutRef.current) {
+        window.clearTimeout(revealTimeoutRef.current)
+      }
       revealRef.current = true
       setGrid((prev) => {
         const next = [...prev]
@@ -74,13 +120,24 @@ export function AsciiCapsule({ className = '', bgColor = 'var(--Heres-bg)' }: { 
         })
         return next
       })
-      setTimeout(() => {
+      revealTimeoutRef.current = window.setTimeout(() => {
         revealRef.current = false
-      }, 1800)
+      }, revealDuration)
     }
-    const t = setInterval(reveal, 4500)
-    return () => clearInterval(t)
-  }, [])
+
+    reveal()
+    const timer = window.setInterval(() => {
+      reveal()
+    }, revealCadence)
+
+    return () => {
+      if (revealTimeoutRef.current) {
+        window.clearTimeout(revealTimeoutRef.current)
+        revealTimeoutRef.current = null
+      }
+      window.clearInterval(timer)
+    }
+  }, [isMobile, isVisible, prefersReducedMotion])
 
   // ?뱀궗?댄듃 ?됱긽: ?쒖븞(accent) #22d3ee, 蹂대씪(purple) #a78bfa
   const colorAccent = 'rgba(34, 211, 238, 0.95)'
@@ -90,6 +147,7 @@ export function AsciiCapsule({ className = '', bgColor = 'var(--Heres-bg)' }: { 
 
   return (
     <div
+      ref={wrapperRef}
       className={`ascii-capsule-wrapper relative mx-auto flex items-center justify-center py-4 ${className}`}
       style={{ maxWidth: 480 }}
       aria-hidden
@@ -125,7 +183,7 @@ export function AsciiCapsule({ className = '', bgColor = 'var(--Heres-bg)' }: { 
             return (
               <span
                 key={i}
-                className="ascii-char text-center transition-all duration-150"
+                className="ascii-char text-center transition-opacity duration-150"
                 style={{
                   opacity,
                   color,

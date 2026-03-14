@@ -10,12 +10,6 @@ const AsciiCapsule = dynamic(() => import('@/components/AsciiCapsule').then((m) 
   loading: () => <div className="min-h-[120px]" aria-hidden />,
 })
 
-const HeroCapsuleVideo = dynamic(() => import('@/components/HeroCapsuleVideo').then((m) => ({ default: m.HeroCapsuleVideo })), {
-  ssr: false,
-  loading: () => <div className="aspect-video w-full animate-pulse rounded-2xl bg-Heres-surface/50" aria-hidden />,
-})
-
-
 function DashedLine({
   height = 50,
   segmentIndex,
@@ -138,7 +132,31 @@ export default function HomePage() {
   const partnersSectionRef = useRef<HTMLElement>(null)
   const unleashRef = useRef<HTMLElement>(null)
   const [activeWhyIndex, setActiveWhyIndex] = useState(0)
+  const [isMobileViewport, setIsMobileViewport] = useState(false)
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
   const gsapCtxRef = useRef<{ revert?: () => void } | null>(null)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const mobileQuery = window.matchMedia('(max-width: 768px)')
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+
+    const syncViewportState = () => {
+      setIsMobileViewport(mobileQuery.matches)
+      setPrefersReducedMotion(motionQuery.matches)
+    }
+
+    syncViewportState()
+    mobileQuery.addEventListener('change', syncViewportState)
+    motionQuery.addEventListener('change', syncViewportState)
+
+    return () => {
+      mobileQuery.removeEventListener('change', syncViewportState)
+      motionQuery.removeEventListener('change', syncViewportState)
+    }
+  }, [])
+
   useEffect(() => {
     let cancelled = false
     void (async () => {
@@ -146,34 +164,38 @@ export default function HomePage() {
       const ScrollTrigger = (await import('gsap/ScrollTrigger')).default
       gsap.registerPlugin(ScrollTrigger)
       if (cancelled) return
+      const lowPowerMode = prefersReducedMotion || isMobileViewport
       gsapCtxRef.current = gsap.context(() => {
         gsap.from(heroRef.current?.querySelector('[data-hero-tag]') ?? {}, {
           opacity: 0,
           y: 20,
-          duration: 0.6,
+          duration: lowPowerMode ? 0.45 : 0.6,
           ease: 'power3.out',
         })
         gsap.from(heroRef.current?.querySelector('h1') ?? {}, {
           opacity: 0,
           y: 40,
-          duration: 0.8,
-          delay: 0.15,
+          duration: lowPowerMode ? 0.6 : 0.8,
+          delay: lowPowerMode ? 0.08 : 0.15,
           ease: 'power3.out',
         })
         gsap.from(heroRef.current?.querySelector('[data-hero-ascii]') ?? {}, {
           opacity: 0,
           y: 24,
-          duration: 0.9,
-          delay: 0.3,
+          duration: lowPowerMode ? 0.7 : 0.9,
+          delay: lowPowerMode ? 0.15 : 0.3,
           ease: 'power3.out',
         })
         gsap.from(heroRef.current?.querySelector('[data-hero-below-capsule]') ?? {}, {
           opacity: 0,
           y: 20,
-          duration: 0.8,
-          delay: 0.6,
+          duration: lowPowerMode ? 0.6 : 0.8,
+          delay: lowPowerMode ? 0.28 : 0.6,
           ease: 'power3.out',
         })
+        if (lowPowerMode) {
+          return
+        }
         if (whySectionRef.current) {
           const tl = gsap.timeline({
             scrollTrigger: {
@@ -257,7 +279,12 @@ export default function HomePage() {
       if (gsapCtxRef.current?.revert) gsapCtxRef.current.revert()
       gsapCtxRef.current = null
     }
-  }, [])
+  }, [isMobileViewport, prefersReducedMotion])
+
+  const deferredSectionStyle = {
+    contentVisibility: 'auto',
+    containIntrinsicSize: '1px 900px',
+  } as const
 
   return (
     <div className="bg-hero grain-overlay">
@@ -348,7 +375,7 @@ export default function HomePage() {
       </section>
 
       {/* Why Build With Heres */}
-      <section ref={whySectionRef} className="why-build-section py-24 sm:py-32">
+      <section ref={whySectionRef} className="why-build-section py-24 sm:py-32" style={deferredSectionStyle}>
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h2 ref={whyTitleRef} className="font-display text-3xl font-bold uppercase tracking-tight text-white sm:text-4xl lg:text-5xl">
@@ -536,7 +563,7 @@ export default function HomePage() {
       <div className="glow-line" />
 
       {/* How it works - Bento Grid */}
-      <section className="relative py-24 sm:py-32">
+      <section className="relative py-24 sm:py-32" style={deferredSectionStyle}>
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h2 ref={howTitleRef} className="font-display text-3xl font-bold uppercase tracking-tight text-Heres-white sm:text-4xl lg:text-5xl">
@@ -566,7 +593,6 @@ export default function HomePage() {
                     fill
                     className="object-cover object-top transition-transform duration-700 group-hover:scale-[1.02]"
                     sizes="(max-width: 768px) 100vw, 33vw"
-                    unoptimized
                   />
                 </div>
               </div>
@@ -622,7 +648,6 @@ export default function HomePage() {
                     fill
                     className="object-cover object-top transition-transform duration-700 group-hover:scale-[1.02]"
                     sizes="(max-width: 768px) 100vw, 33vw"
-                    unoptimized
                   />
                 </div>
               </div>
@@ -638,7 +663,7 @@ export default function HomePage() {
       <div className="glow-line" />
 
       {/* Heres on Injective */}
-      <section className="relative py-24 sm:py-32 overflow-hidden">
+      <section className="relative py-24 sm:py-32 overflow-hidden" style={deferredSectionStyle}>
         {/* Background accent */}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-Heres-purple/[0.02] to-transparent" aria-hidden />
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -653,7 +678,6 @@ export default function HomePage() {
                   height={600}
                   className="w-full h-auto"
                   sizes="(max-width: 768px) 100vw, 60vw"
-                  unoptimized
                 />
               </div>
             </div>
@@ -688,7 +712,7 @@ export default function HomePage() {
       <div className="glow-line" />
 
       {/* Unleash the Power of Heres */}
-      <section ref={unleashRef} className="relative overflow-hidden py-28 sm:py-36">
+      <section ref={unleashRef} className="relative overflow-hidden py-28 sm:py-36" style={deferredSectionStyle}>
         {/* Background orbs */}
         <div className="pointer-events-none absolute top-1/2 left-1/4 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-Heres-cyan/[0.03] blur-[120px]" aria-hidden />
         <div className="pointer-events-none absolute top-1/2 right-1/4 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-Heres-purple/[0.03] blur-[100px]" aria-hidden />
@@ -720,7 +744,7 @@ export default function HomePage() {
       <div className="glow-line" />
 
       {/* Partners */}
-      <section ref={partnersSectionRef} className="partners-section relative py-24 sm:py-32">
+      <section ref={partnersSectionRef} className="partners-section relative py-24 sm:py-32" style={deferredSectionStyle}>
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <h2 className="font-display text-center text-3xl font-bold uppercase tracking-tight text-Heres-white sm:text-4xl lg:text-5xl">
             The Possibilities Are Limitless
