@@ -21,3 +21,21 @@ export function hasInjectiveWalletUiConfig(): boolean {
     INJECTIVE_EVM_CONFIG.walletConnectProjectId
   )
 }
+
+function normalizeBaseUrl(url: string): string {
+  return url.replace(/\/+$/, '')
+}
+
+export function hasInjectiveExplorerUrl(): boolean {
+  return Boolean(INJECTIVE_EVM_CONFIG.explorerUrl)
+}
+
+export function getInjectiveExplorerAddressUrl(address: string): string | null {
+  if (!hasInjectiveExplorerUrl() || !address) return null
+  return `${normalizeBaseUrl(INJECTIVE_EVM_CONFIG.explorerUrl)}/address/${address}`
+}
+
+export function getInjectiveExplorerTxUrl(txHash: string): string | null {
+  if (!hasInjectiveExplorerUrl() || !txHash) return null
+  return `${normalizeBaseUrl(INJECTIVE_EVM_CONFIG.explorerUrl)}/tx/${txHash}`
+}

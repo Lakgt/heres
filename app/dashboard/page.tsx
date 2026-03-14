@@ -7,6 +7,7 @@ import {
   ChevronUp,
   Copy,
   Database,
+  ExternalLink,
   RefreshCw,
   Settings,
   Signal,
@@ -21,7 +22,7 @@ import { getEnhancedTransactions } from '@/lib/helius'
 import { initFeeConfig } from '@/lib/capsule/client'
 import { getFeeConfigPDA } from '@/lib/program'
 import { useAppWallet } from '@/components/wallet/AppWalletContext'
-import { INJECTIVE_EVM_CONFIG } from '@/config/injective'
+import { getInjectiveExplorerAddressUrl, getInjectiveExplorerTxUrl, INJECTIVE_EVM_CONFIG } from '@/config/injective'
 import { getInjectiveCapsuleCount, listInjectiveCapsules } from '@/lib/injective/client'
 import type { CapsuleRecord } from '@/lib/capsule/types'
 
@@ -380,6 +381,21 @@ const getTokenDeltaFromMeta = (meta: any) => {
   const [mint, value] = first
   const delta = value.post - value.pre
   return `${noticeSign(delta)}${delta.toFixed(4)} ${maskAddress(mint)}`
+}
+
+function ExplorerLink({ href, label, className }: { href: string | null; label: string; className?: string }) {
+  if (!href) return null
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`inline-flex items-center gap-1 text-xs font-medium text-Heres-accent transition-colors hover:text-Heres-white ${className || ''}`}
+    >
+      {label}
+      <ExternalLink className="h-3.5 w-3.5" />
+    </a>
+  )
 }
 
 const toInjectiveDashboardRow = (capsule: CapsuleRecord): CapsuleRow => {
@@ -902,6 +918,9 @@ export default function DashboardPage() {
   const rpcLabel = isInjectiveDashboard
     ? 'Injective EVM RPC'
     : SOLANA_CONFIG.HELIUS_API_KEY ? 'Helius Devnet' : 'Solana Devnet'
+  const programExplorerUrl = isInjectiveDashboard
+    ? getInjectiveExplorerAddressUrl(programIdStr)
+    : `https://explorer.solana.com/address/${programIdStr}?cluster=${SOLANA_CONFIG.NETWORK || 'devnet'}`
 
   return (
     <div className="min-h-screen bg-hero text-Heres-white">
@@ -1015,10 +1034,16 @@ export default function DashboardPage() {
               <p className="text-[10px] font-semibold uppercase tracking-wider text-Heres-muted mb-1">
                 {isInjectiveDashboard ? 'Contract' : 'Program ID'}
               </p>
-              <div className="flex items-center gap-1">
-                <p className="text-sm font-mono text-Heres-white truncate min-w-0" title={programIdStr}>
-                  {maskAddress(programIdStr)}
-                </p>
+              <div className="flex items-start gap-1">
+                <div className="min-w-0">
+                  <p className="text-sm font-mono text-Heres-white truncate min-w-0" title={programIdStr}>
+                    {maskAddress(programIdStr)}
+                  </p>
+                  <ExplorerLink
+                    href={programExplorerUrl}
+                    label={isInjectiveDashboard ? 'Open contract' : 'Open program'}
+                  />
+                </div>
                 <CopyButton value={programIdStr} />
               </div>
             </div>
@@ -1141,23 +1166,36 @@ export default function DashboardPage() {
                             {capsule.signature ? maskAddress(capsule.signature) : '...'}
                           </span>
                           {capsule.signature && <CopyButton value={capsule.signature} />}
+                          {isInjectiveDashboard && capsule.signature && (
+                            <ExplorerLink href={getInjectiveExplorerTxUrl(capsule.signature)} label="View tx" />
+                          )}
                         </div>
                         <div className="grid gap-2 text-xs text-Heres-muted md:grid-cols-3">
                           <div>
                             <p className="uppercase tracking-wider text-Heres-muted text-[10px] font-medium">Capsule</p>
-                            <div className="flex items-center gap-1 min-w-0">
-                              <p className="font-mono text-Heres-white break-all truncate">
-                                {maskAddress(capsule.capsuleAddress)}
-                              </p>
+                            <div className="flex items-start gap-1 min-w-0">
+                              <div className="min-w-0">
+                                <p className="font-mono text-Heres-white break-all truncate">
+                                  {maskAddress(capsule.capsuleAddress)}
+                                </p>
+                                {isInjectiveDashboard && (
+                                  <ExplorerLink href={programExplorerUrl} label="View contract" />
+                                )}
+                              </div>
                               <CopyButton value={capsule.capsuleAddress} />
                             </div>
                           </div>
                           <div>
                             <p className="uppercase tracking-wider text-Heres-muted text-[10px] font-medium">Owner</p>
-                            <div className="flex items-center gap-1 min-w-0">
-                              <p className="font-mono text-Heres-white break-all truncate">
-                                {capsule.owner ? maskAddress(capsule.owner) : '...'}
-                              </p>
+                            <div className="flex items-start gap-1 min-w-0">
+                              <div className="min-w-0">
+                                <p className="font-mono text-Heres-white break-all truncate">
+                                  {capsule.owner ? maskAddress(capsule.owner) : '...'}
+                                </p>
+                                {isInjectiveDashboard && capsule.owner && (
+                                  <ExplorerLink href={getInjectiveExplorerAddressUrl(capsule.owner)} label="View owner" />
+                                )}
+                              </div>
                               {capsule.owner && <CopyButton value={capsule.owner} />}
                             </div>
                           </div>
@@ -1205,15 +1243,25 @@ export default function DashboardPage() {
                         <div className="grid gap-3 md:grid-cols-2 max-w-full">
                           <div>
                             <p className="text-[10px] font-medium uppercase tracking-wider text-Heres-muted">Capsule</p>
-                            <div className="flex items-center gap-1 min-w-0">
-                              <p className="font-mono text-Heres-white break-all truncate">{capsule.capsuleAddress}</p>
+                            <div className="flex items-start gap-1 min-w-0">
+                              <div className="min-w-0">
+                                <p className="font-mono text-Heres-white break-all truncate">{capsule.capsuleAddress}</p>
+                                {isInjectiveDashboard && (
+                                  <ExplorerLink href={programExplorerUrl} label="Open contract" />
+                                )}
+                              </div>
                               <CopyButton value={capsule.capsuleAddress} />
                             </div>
                           </div>
                           <div>
                             <p className="text-[10px] font-medium uppercase tracking-wider text-Heres-muted">Owner</p>
-                            <div className="flex items-center gap-1 min-w-0">
-                              <p className="font-mono text-Heres-white break-all truncate">{capsule.owner || '...'}</p>
+                            <div className="flex items-start gap-1 min-w-0">
+                              <div className="min-w-0">
+                                <p className="font-mono text-Heres-white break-all truncate">{capsule.owner || '...'}</p>
+                                {isInjectiveDashboard && capsule.owner && (
+                                  <ExplorerLink href={getInjectiveExplorerAddressUrl(capsule.owner)} label="Open owner" />
+                                )}
+                              </div>
                               {capsule.owner && <CopyButton value={capsule.owner} />}
                             </div>
                           </div>
@@ -1272,8 +1320,13 @@ export default function DashboardPage() {
                           )}
                           <div>
                             <p className="text-[10px] font-medium uppercase tracking-wider text-Heres-muted">Latest Signature</p>
-                            <div className="flex items-center gap-1 min-w-0">
-                              <p className="font-mono text-Heres-white break-all truncate">{capsule.signature || '...'}</p>
+                            <div className="flex items-start gap-1 min-w-0">
+                              <div className="min-w-0">
+                                <p className="font-mono text-Heres-white break-all truncate">{capsule.signature || '...'}</p>
+                                {isInjectiveDashboard && capsule.signature && (
+                                  <ExplorerLink href={getInjectiveExplorerTxUrl(capsule.signature)} label="Open tx" />
+                                )}
+                              </div>
                               {capsule.signature && <CopyButton value={capsule.signature} />}
                             </div>
                           </div>
@@ -1299,8 +1352,15 @@ export default function DashboardPage() {
                                     </span>
                                   </div>
                                   <div className="mt-2 flex items-start justify-between gap-2 text-[11px] text-Heres-muted">
-                                    <div className="flex min-w-0 items-center gap-1">
-                                      <span className="font-mono break-all truncate">{event.signature}</span>
+                                    <div className="flex min-w-0 items-start gap-1">
+                                      <div className="min-w-0">
+                                        <span className="font-mono break-all truncate">{event.signature}</span>
+                                        {isInjectiveDashboard && (
+                                          <div className="mt-1">
+                                            <ExplorerLink href={getInjectiveExplorerTxUrl(event.signature)} label="Open tx" />
+                                          </div>
+                                        )}
+                                      </div>
                                       <CopyButton value={event.signature} className="shrink-0" />
                                     </div>
                                     <span className={`shrink-0 ${event.status === 'success' ? 'text-Heres-accent' : 'text-red-400'}`}>

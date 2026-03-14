@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { PublicKey } from '@solana/web3.js'
-import { ArrowLeft, Copy, RefreshCw, Shield } from 'lucide-react'
+import { ArrowLeft, Copy, ExternalLink, RefreshCw, Shield } from 'lucide-react'
 import {
   getCapsuleByAddress,
   executeIntent,
@@ -14,7 +14,7 @@ import {
 import { useAppWallet } from '@/components/wallet/AppWalletContext'
 import { getProgramId } from '@/config/solana'
 import { SOLANA_CONFIG, MAGICBLOCK_ER, PER_TEE } from '@/constants'
-import { INJECTIVE_EVM_CONFIG } from '@/config/injective'
+import { getInjectiveExplorerAddressUrl, getInjectiveExplorerTxUrl, INJECTIVE_EVM_CONFIG } from '@/config/injective'
 import { parseIntentPayload, formatDuration } from '@/utils/intent'
 import { buildCreSignedMessage } from '@/utils/creAuth'
 import { bytesToBase64 } from '@/utils/creCrypto'
@@ -193,6 +193,21 @@ function CopyButton({ value }: { value: string }) {
   )
 }
 
+function ExplorerLink({ href, label }: { href: string | null; label: string }) {
+  if (!href) return null
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1 text-xs font-medium text-Heres-accent transition-colors hover:text-Heres-white"
+    >
+      {label}
+      <ExternalLink className="h-3.5 w-3.5" />
+    </a>
+  )
+}
+
 function timeAgo(ms: number | null) {
   if (!ms) return '—'
   const diff = Math.max(0, Date.now() - ms)
@@ -230,12 +245,22 @@ export default function CapsuleDetailPage() {
   const [actionResult, setActionResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [creDispatchLoading, setCreDispatchLoading] = useState(false)
   const [creDispatchResult, setCreDispatchResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [latestActionTxHash, setLatestActionTxHash] = useState<string | null>(null)
   const isInjectiveCapsule = capsule?.chain === 'injective-evm'
   const assetSymbol = isInjectiveCapsule ? 'INJ' : 'SOL'
   const capsuleAddress = capsule?.capsuleAddress ?? capsule?.id ?? address ?? ''
   const ownerAddress = capsule ? toDisplayAddress(capsule.owner) : ''
   const programAddress = isInjectiveCapsule ? INJECTIVE_EVM_CONFIG.capsuleManagerAddress : getProgramId().toBase58()
   const mintAddress = capsule ? toDisplayAddress(capsule.mint) : ''
+  const capsuleExplorerUrl = isInjectiveCapsule
+    ? getInjectiveExplorerAddressUrl(programAddress)
+    : `https://explorer.solana.com/address/${capsuleAddress}?cluster=${SOLANA_CONFIG.NETWORK || 'devnet'}`
+  const ownerExplorerUrl = isInjectiveCapsule ? getInjectiveExplorerAddressUrl(ownerAddress) : null
+  const programExplorerUrl = isInjectiveCapsule
+    ? getInjectiveExplorerAddressUrl(programAddress)
+    : `https://explorer.solana.com/address/${programAddress}?cluster=${SOLANA_CONFIG.NETWORK || 'devnet'}`
+  const mintExplorerUrl = isInjectiveCapsule && mintAddress ? getInjectiveExplorerAddressUrl(mintAddress) : null
+  const latestActionExplorerUrl = isInjectiveCapsule ? getInjectiveExplorerTxUrl(latestActionTxHash || '') : null
   const isOwner = Boolean(
     wallet.connected &&
     capsule?.owner &&
@@ -254,6 +279,7 @@ export default function CapsuleDetailPage() {
     if (!wallet.connected || !capsule) return
     setActionLoading('execute')
     setActionResult(null)
+    setLatestActionTxHash(null)
     try {
       const beneficiaries = intentParsed?.type === 'token' && 'beneficiaries' in intentParsed && intentParsed.beneficiaries
         ? intentParsed.beneficiaries.filter((b: any) => b.address?.trim()).map((b: any) => ({
@@ -270,6 +296,7 @@ export default function CapsuleDetailPage() {
       }
       const tx = await executeIntent(walletRef as any, capsule.id ?? capsule.owner, beneficiaries, mint)
       await refreshCapsule()
+      setLatestActionTxHash(tx)
       setActionResult({ type: 'success', message: `${isInjectiveCapsule ? 'Execute Capsule' : 'Execute Intent'} TX: ${tx}` })
     } catch (err: any) {
       console.error('[Execute Intent] Error:', err)
@@ -283,6 +310,7 @@ export default function CapsuleDetailPage() {
     if (!wallet.connected || !capsule) return
     setActionLoading('distribute')
     setActionResult(null)
+    setLatestActionTxHash(null)
     try {
       const beneficiaries = intentParsed?.type === 'token' && 'beneficiaries' in intentParsed && intentParsed.beneficiaries
         ? intentParsed.beneficiaries.filter((b: any) => b.address?.trim()).map((b: any) => ({
@@ -299,6 +327,7 @@ export default function CapsuleDetailPage() {
       }
       const tx = await distributeAssets(walletRef as any, capsule.id ?? capsule.owner, beneficiaries, mint)
       await refreshCapsule()
+      setLatestActionTxHash(tx)
       setActionResult({ type: 'success', message: `Distribute Assets TX: ${tx}` })
     } catch (err: any) {
       console.error('[Distribute Assets] Error:', err)
@@ -312,9 +341,11 @@ export default function CapsuleDetailPage() {
     if (!wallet.connected || !capsule || !isInjectiveCapsule) return
     setActionLoading('heartbeat')
     setActionResult(null)
+    setLatestActionTxHash(null)
     try {
       const tx = await updateActivity(wallet as any, capsule.id ?? capsule.owner)
       await refreshCapsule()
+      setLatestActionTxHash(tx)
       setActionResult({ type: 'success', message: `Heartbeat TX: ${tx}` })
     } catch (err: any) {
       console.error('[Heartbeat] Error:', err)
@@ -505,6 +536,7 @@ export default function CapsuleDetailPage() {
         if (data.status === 'executed') {
           await refreshCapsule()
           if (!cancelled) {
+            setLatestActionTxHash(data.txHash)
             setActionResult({ type: 'success', message: `Auto-executed capsule TX: ${data.txHash}` })
           }
         }
@@ -716,12 +748,15 @@ export default function CapsuleDetailPage() {
               <p className="text-[10px] font-semibold uppercase tracking-wider text-Heres-muted mb-1">Capsule ID</p>
               <div className="flex items-center gap-1">
                 {isInjectiveCapsule ? (
-                  <p className="text-sm font-mono text-Heres-accent truncate min-w-0" title={capsuleAddress}>
-                    {maskAddress(capsuleAddress)}
-                  </p>
+                  <div className="min-w-0">
+                    <p className="text-sm font-mono text-Heres-accent truncate min-w-0" title={capsuleAddress}>
+                      {maskAddress(capsuleAddress)}
+                    </p>
+                    <ExplorerLink href={capsuleExplorerUrl} label="Open contract" />
+                  </div>
                 ) : (
                   <a
-                    href={`https://explorer.solana.com/address/${capsuleAddress}?cluster=${SOLANA_CONFIG.NETWORK || 'devnet'}`}
+                    href={capsuleExplorerUrl ?? undefined}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm font-mono text-Heres-accent truncate min-w-0 hover:underline"
@@ -736,9 +771,12 @@ export default function CapsuleDetailPage() {
             <div className="rounded-xl border border-Heres-border bg-Heres-card/80 p-4">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-Heres-muted mb-1">Owner</p>
               <div className="flex items-center gap-1">
-                <p className="text-sm font-mono text-Heres-white truncate min-w-0" title={ownerAddress}>
-                  {maskAddress(ownerAddress)}
-                </p>
+                <div className="min-w-0">
+                  <p className="text-sm font-mono text-Heres-white truncate min-w-0" title={ownerAddress}>
+                    {maskAddress(ownerAddress)}
+                  </p>
+                  <ExplorerLink href={ownerExplorerUrl} label="Open owner" />
+                </div>
                 <CopyButton value={ownerAddress} />
               </div>
             </div>
@@ -747,9 +785,12 @@ export default function CapsuleDetailPage() {
                 {isInjectiveCapsule ? 'Contract' : 'Program ID'}
               </p>
               <div className="flex items-center gap-1">
-                <p className="text-sm font-mono text-Heres-white truncate min-w-0" title={programAddress}>
-                  {maskAddress(programAddress)}
-                </p>
+                <div className="min-w-0">
+                  <p className="text-sm font-mono text-Heres-white truncate min-w-0" title={programAddress}>
+                    {maskAddress(programAddress)}
+                  </p>
+                  <ExplorerLink href={programExplorerUrl} label={isInjectiveCapsule ? 'Open contract' : 'Open program'} />
+                </div>
                 <CopyButton value={programAddress} />
               </div>
             </div>
@@ -757,9 +798,12 @@ export default function CapsuleDetailPage() {
               <div className="rounded-xl border border-Heres-border bg-Heres-card/80 p-4">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-Heres-muted mb-1">Token Mint</p>
                 <div className="flex items-center gap-1">
-                  <p className="text-sm font-mono text-Heres-white truncate min-w-0" title={mintAddress}>
-                    {maskAddress(mintAddress)}
-                  </p>
+                  <div className="min-w-0">
+                    <p className="text-sm font-mono text-Heres-white truncate min-w-0" title={mintAddress}>
+                      {maskAddress(mintAddress)}
+                    </p>
+                    <ExplorerLink href={mintExplorerUrl} label="Open token" />
+                  </div>
                   <CopyButton value={mintAddress} />
                 </div>
               </div>
@@ -1050,7 +1094,12 @@ export default function CapsuleDetailPage() {
                       ? 'border-green-500/30 bg-green-500/10 text-green-400'
                       : 'border-red-500/30 bg-red-500/10 text-red-400'
                   }`}>
-                    {actionResult.message}
+                    <div>{actionResult.message}</div>
+                    {actionResult.type === 'success' && latestActionExplorerUrl && (
+                      <div className="mt-2">
+                        <ExplorerLink href={latestActionExplorerUrl} label="View transaction on Injective Explorer" />
+                      </div>
+                    )}
                   </div>
                 )}
                 {creDispatchResult && (

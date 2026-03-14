@@ -139,6 +139,18 @@ export default function CreatePage() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showWalletMenu])
 
+  useEffect(() => {
+    if (!injectiveMode) return
+
+    setBeneficiaries((current) =>
+      current.map((beneficiary) =>
+        beneficiary.chain === 'evm'
+          ? beneficiary
+          : { ...beneficiary, chain: 'evm', destinationChainSelector: '' }
+      )
+    )
+  }, [injectiveMode])
+
   // Fetch wallet NFTs when NFT path is selected (Helius DAS when API key set, else RPC)
   useEffect(() => {
     if (capsuleType !== 'nft' || !publicKey || !connected) return
@@ -320,7 +332,11 @@ export default function CreatePage() {
 
   const validateBeneficiaries = (): boolean => {
     if (!validateBeneficiaryAddresses(beneficiaries)) {
-      alert('Please enter valid beneficiary addresses (Solana: base58, EVM: 0x...).')
+      alert(
+        injectiveMode
+          ? 'Please enter a valid Injective EVM beneficiary address (0x...).'
+          : 'Please enter valid beneficiary addresses (Solana: base58, EVM: 0x...).'
+      )
       return false
     }
 
@@ -909,30 +925,36 @@ export default function CreatePage() {
                       <div key={index} className="space-y-2">
                         <div className="flex flex-col sm:flex-row gap-3 items-start">
                           <div className="flex-1 w-full min-w-0">
-                            <div className="mb-2 inline-flex rounded-xl overflow-hidden border border-Heres-border bg-Heres-surface/80 h-[36px]">
-                              <button
-                                type="button"
-                                onClick={() => updateBeneficiary(index, 'chain', 'solana')}
-                                className={`px-3 text-xs font-semibold transition-colors h-full ${beneficiary.chain !== 'evm' ? 'bg-Heres-accent text-Heres-bg' : 'text-Heres-muted hover:text-Heres-white'}`}
-                              >
-                                {isInjectiveEvmChain() ? 'INJ' : 'SOL'}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => updateBeneficiary(index, 'chain', 'evm')}
-                                className={`px-3 text-xs font-semibold transition-colors h-full ${beneficiary.chain === 'evm' ? 'bg-Heres-accent text-Heres-bg' : 'text-Heres-muted hover:text-Heres-white'}`}
-                              >
-                                EVM
-                              </button>
-                            </div>
+                            {injectiveMode ? (
+                              <div className="mb-2 inline-flex h-[36px] items-center rounded-xl border border-Heres-border bg-Heres-accent/10 px-3 text-xs font-semibold text-Heres-accent">
+                                Injective EVM
+                              </div>
+                            ) : (
+                              <div className="mb-2 inline-flex rounded-xl overflow-hidden border border-Heres-border bg-Heres-surface/80 h-[36px]">
+                                <button
+                                  type="button"
+                                  onClick={() => updateBeneficiary(index, 'chain', 'solana')}
+                                  className={`px-3 text-xs font-semibold transition-colors h-full ${beneficiary.chain !== 'evm' ? 'bg-Heres-accent text-Heres-bg' : 'text-Heres-muted hover:text-Heres-white'}`}
+                                >
+                                  SOL
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => updateBeneficiary(index, 'chain', 'evm')}
+                                  className={`px-3 text-xs font-semibold transition-colors h-full ${beneficiary.chain === 'evm' ? 'bg-Heres-accent text-Heres-bg' : 'text-Heres-muted hover:text-Heres-white'}`}
+                                >
+                                  EVM
+                                </button>
+                              </div>
+                            )}
                             <input
                               type="text"
                               value={beneficiary.address}
                               onChange={(e) => updateBeneficiary(index, 'address', e.target.value.trim())}
-                              placeholder={beneficiary.chain === 'evm' ? '0xEvmAddress...' : 'Solana address...'}
+                              placeholder={injectiveMode ? '0xInjectiveEvmAddress...' : beneficiary.chain === 'evm' ? '0xEvmAddress...' : 'Solana address...'}
                               className="w-full rounded-xl border border-Heres-border bg-Heres-surface/80 p-4 text-Heres-white placeholder-Heres-muted focus:outline-none focus:border-Heres-accent/50 font-mono text-sm"
                             />
-                            {beneficiary.chain === 'evm' && (
+                            {beneficiary.chain === 'evm' && !injectiveMode && (
                               <input
                                 type="text"
                                 value={beneficiary.destinationChainSelector || ''}
@@ -982,7 +1004,11 @@ export default function CreatePage() {
                         </div>
                         {beneficiary.address && !isValidBeneficiaryAddress(beneficiary) && (
                           <p className="text-xs text-red-400">
-                            {beneficiary.chain === 'evm' ? 'Invalid EVM address (0x...)' : 'Invalid Solana address'}
+                            {injectiveMode
+                              ? 'Invalid Injective EVM address (0x...)'
+                              : beneficiary.chain === 'evm'
+                                ? 'Invalid EVM address (0x...)'
+                                : 'Invalid Solana address'}
                           </p>
                         )}
                         {beneficiary.address && beneficiary.amount && totalAmount && (
